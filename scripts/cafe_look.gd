@@ -1,5 +1,5 @@
 extends Node3D
-## TeamSpeak Heerlen 3D Café – LOOK v0.6
+## TeamSpeak Heerlen 3D Café – LOOK v0.7
 ## UITSLUITEND DE VORMGEVING. Geen TeamSpeak-, audio-, PTT- of avatar-code.
 ## Ontworpen voor de bestaande CafeWorld + CafeHUD onder res://scenes/main.tscn.
 
@@ -12,6 +12,8 @@ const PLASTER_TEX := preload("res://assets/textures/v06_plaster.png")
 const RUG_TEX := preload("res://assets/textures/v06_rug.png")
 const MENU_TEX := preload("res://assets/textures/v06_coffee_menu.png")
 const SIGN_TEX := preload("res://assets/textures/v06_wall_sign.png")
+const ART_TEX := preload("res://assets/textures/v07_gallery_art.png")
+const LEATHER_TEX := preload("res://assets/textures/v07_leather.png")
 
 const AMBER := Color("ffc078")
 const CREAM := Color("f6e7d4")
@@ -32,7 +34,7 @@ func _install() -> void:
     var world := game.get_node_or_null("CafeWorld") as Node3D
     var hud := game.get_node_or_null("CafeHUD") as CanvasLayer
     if world == null:
-        push_warning("LOOK v0.6: CafeWorld nog niet gevonden; bestaande cafe blijft werken")
+        push_warning("LOOK v0.7: CafeWorld nog niet gevonden; bestaande cafe blijft werken")
         return
 
     _retexture_existing_world(world)
@@ -42,12 +44,16 @@ func _install() -> void:
     _tables_and_lounge(world)
     _plants_and_ambience(world)
     _dancefloor_and_radio(world)
+    _premium_lounge(world)
+    _fine_bar_details(world)
+    _gallery_and_architecture(world)
+    _soft_light_design(world)
 
     if hud != null:
         _reskin_hud(hud)
         _version_badge(hud)
 
-    print("HEERLEN LOOK v0.6 ACTIEF: PBR-structuren, koffiebar, lounge, neon, interface")
+    print("HEERLEN LOOK v0.7 ACTIEF: PBR-structuren, koffiebar, lounge, neon, interface")
 
 func _process(delta: float) -> void:
     light_time += delta
@@ -411,7 +417,7 @@ func _style_recursive(node: Node) -> void:
 func _version_badge(hud: CanvasLayer) -> void:
     # Duidelijk verschil met v0.5.1, zonder de bestaande knoppen te blokkeren.
     var box := PanelContainer.new()
-    box.name = "LookV06Badge"
+    box.name = "LookV07Badge"
     box.anchor_left = 0.5
     box.anchor_right = 0.5
     box.offset_left = -183
@@ -431,10 +437,90 @@ func _version_badge(hud: CanvasLayer) -> void:
     title.mouse_filter = Control.MOUSE_FILTER_IGNORE
     contents.add_child(title)
     var sub := Label.new()
-    sub.text = "3D CAFÉ  •  LOOK v0.6  •  LIVE VOICE"
+    sub.text = "3D CAFÉ  •  LOOK v0.7  •  LIVE VOICE"
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     sub.add_theme_font_size_override("font_size", 12)
     sub.add_theme_color_override("font_color", AMBER)
     sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
     contents.add_child(sub)
     hud.add_child(box)
+
+
+# ===== LOOK v0.7: verfijnde decoratie als losse, niet-solide laag =====
+func _premium_lounge(world: Node3D) -> void:
+    var leather := _texture_material(LEATHER_TEX, 0.84)
+    var piping := _plain(Color("c69b69"), 0.36, 0.38)
+    var oak := _texture_material(WALNUT_TEX, 0.57)
+    var carpet := _texture_material(RUG_TEX, 0.96)
+    var chrome := _plain(Color("7d8589"), 0.32, 0.57)
+
+    # Luxe ronde banken langs de rechterwand. Bestaande stoelen blijven functioneel.
+    for z in [3.45, 6.65]:
+        _box(world, Vector3(10.60, 0.61, z), Vector3(1.45, 0.28, 2.25), leather)
+        _box(world, Vector3(11.24, 1.02, z), Vector3(0.27, 0.94, 2.33), leather)
+        _box(world, Vector3(10.58, 0.77, z), Vector3(1.30, 0.08, 2.16), piping)
+        for dz in [-0.65, 0.0, 0.65]:
+            _sphere(world, Vector3(10.51, 0.89, z + dz), Vector3(0.70, 0.24, 0.54), leather)
+            _sphere(world, Vector3(11.06, 1.19, z + dz), Vector3(0.17, 0.37, 0.51), leather)
+        _box(world, Vector3(9.0, 0.018, z), Vector3(2.35, 0.018, 2.4), carpet)
+        _cylinder(world, Vector3(8.88, 0.48, z), 0.72, 0.09, oak)
+        _cylinder(world, Vector3(8.88, 0.24, z), 0.085, 0.48, chrome)
+        _cup(world, Vector3(9.13, 0.54, z + 0.19))
+
+func _fine_bar_details(world: Node3D) -> void:
+    var brass := _plain(Color("bf965d"), 0.27, 0.67)
+    var ceramic := _plain(Color("e6d9c7"), 0.23)
+    var roast := _plain(Color("4a3328"), 0.76)
+    var glass := _plain(Color("8fbcc0"), 0.18)
+    var chrome := _plain(Color("424a4f"), 0.29, 0.69)
+    var edge := _glow(Color("ffd2a0"), 1.9)
+
+    # Nettere zwarte espressoapparatuur, kraantjes en servies op de koffiebar.
+    _box(world, Vector3(-9.6, 1.73, -2.65), Vector3(0.66, 0.73, 0.45), chrome)
+    _box(world, Vector3(-9.60, 2.08, -2.38), Vector3(0.47, 0.08, 0.06), brass)
+    for x in [-9.77, -9.6, -9.43]:
+        _cylinder(world, Vector3(x, 2.15, -2.37), 0.042, 0.06, edge)
+    for x in [-8.1, -7.72]:
+        _cylinder(world, Vector3(x, 1.48, -2.6), 0.13, 0.21, ceramic)
+        _cylinder(world, Vector3(x, 1.59, -2.6), 0.12, 0.018, roast)
+    for x in [-4.04, -3.62]:
+        _cylinder(world, Vector3(x, 1.58, -2.60), 0.10, 0.39, glass)
+        _cylinder(world, Vector3(x, 1.79, -2.60), 0.11, 0.04, brass)
+    _box(world, Vector3(-7.3, 1.13, -1.825), Vector3(7.9, 0.024, 0.035), edge)
+
+func _gallery_and_architecture(world: Node3D) -> void:
+    var walnut := _texture_material(WALNUT_TEX, 0.58)
+    var brass := _plain(Color("b78e5d"), 0.34, 0.58)
+    var cream := _plain(Color("e1d3c1"), 0.87)
+    var light := _glow(Color("ffbc7f"), 2.25)
+
+    # Hoge lambrisering en symmetrische sierpanelen bij de lounge.
+    for z in [-7.8, -4.9, -2.0, 0.9, 3.8, 6.7]:
+        _box(world, Vector3(11.61, 0.71, z), Vector3(0.05, 1.26, 2.35), walnut)
+        _box(world, Vector3(11.55, 1.35, z), Vector3(0.09, 0.045, 2.38), brass)
+        _box(world, Vector3(11.54, 0.29, z), Vector3(0.09, 0.045, 2.32), brass)
+
+    # Nieuwe rustige poster in de lounge, recht aan achterwand.
+    _box(world, Vector3(-1.8, 2.55, -9.20), Vector3(2.45, 2.15, 0.075), walnut)
+    _box(world, Vector3(-1.8, 2.55, -9.135), Vector3(2.30, 2.00, 0.045), brass)
+    _poster(world, Vector3(-1.8, 2.55, -9.095), Vector2(2.18, 1.86), ART_TEX)
+    _box(world, Vector3(-1.8, 3.66, -9.07), Vector3(2.27, 0.028, 0.035), light)
+
+    # Kleine voorzetplint aan het einde van de bestaande bar.
+    _box(world, Vector3(-3.2, 0.15, -1.79), Vector3(0.08, 0.30, 1.40), cream)
+
+func _soft_light_design(world: Node3D) -> void:
+    var brass := _plain(Color("bf985b"), 0.34, 0.61)
+    var warm := _glow(Color("ffd4a5"), 2.3)
+    var dark := _plain(Color("242a2c"), 0.63)
+    # Wandlampen, zó geplaatst dat ze lopen en de spelcamera niet blokkeren.
+    for z in [-6.8, -3.3, 0.2, 3.7, 7.2]:
+        _box(world, Vector3(-11.69, 2.71, z), Vector3(0.13, 0.31, 0.17), brass)
+        _sphere(world, Vector3(-11.56, 2.68, z), Vector3(0.26, 0.24, 0.26), warm)
+    for x in [3.0, 6.6, 10.1]:
+        _cylinder(world, Vector3(x, 4.31, 6.3), 0.013, 0.65, dark)
+        _cylinder(world, Vector3(x, 3.94, 6.3), 0.31, 0.17, brass)
+        _cylinder(world, Vector3(x, 3.83, 6.3), 0.15, 0.05, warm)
+    # Enkel twee nieuwe echte lichten; lage GPU-kosten, subtiel meer diepte.
+    _local_light(world, Vector3(-4.0, 3.44, 4.0), Color("ffd7ac"), 0.58, 5.0)
+    _local_light(world, Vector3(8.3, 3.48, 5.3), Color("ffca94"), 0.58, 5.0)
