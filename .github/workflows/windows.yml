@@ -71,7 +71,7 @@ jobs:
             throw 'Windows x64 exporttemplate ontbreekt.'
           }
 
-          Write-Host 'Godot exporttemplates geinstalleerd.'
+          Write-Host 'Godot exporttemplates geïnstalleerd.'
 
       - name: Importeer 3D-cafe project
         shell: pwsh
@@ -79,7 +79,19 @@ jobs:
           & $env:GODOT_BIN --headless --editor --import --path . --quit
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Godot projectimport mislukt; controleer GDScript fouten in het log.'
+            throw 'Godot projectimport mislukt. Controleer de GDScript-fouten.'
+          }
+
+      - name: Test of 3D-cafe en menu echt starten
+        shell: pwsh
+        run: |
+          & $env:GODOT_BIN --headless --path . --script 'res://tests/smoke_test.gd' --log-file 'startup-check.log'
+
+          if ($LASTEXITCODE -ne 0) {
+            if (Test-Path 'startup-check.log') {
+              Get-Content 'startup-check.log' -Tail 100
+            }
+            throw 'De cafe-starttest is mislukt. Setup.exe wordt NIET gemaakt.'
           }
 
       - name: Bouw Windows app
@@ -90,7 +102,7 @@ jobs:
           & $env:GODOT_BIN --headless --path . --export-release 'Windows Desktop' 'dist/TS-Heerlen-3D-Cafe.exe'
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Godot export mislukt; controleer het log.'
+            throw 'Godot export mislukt. Controleer het log.'
           }
 
           if (-not (Test-Path 'dist/TS-Heerlen-3D-Cafe.exe')) {
@@ -134,7 +146,7 @@ jobs:
             throw 'Inno Setup compile mislukt.'
           }
 
-          $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe'
+          $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.1.exe'
 
           if (-not (Test-Path $setup)) {
             throw 'Setup.exe ontbreekt.'
@@ -145,8 +157,8 @@ jobs:
       - name: Download Windows-installer
         uses: actions/upload-artifact@v4
         with:
-          name: TS-Heerlen-3D-Cafe-Setup-v0.2
-          path: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe
+          name: TS-Heerlen-3D-Cafe-Setup-v0.2.1
+          path: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.1.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -154,5 +166,5 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe
+          files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.1.exe
           generate_release_notes: true
