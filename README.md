@@ -6,7 +6,7 @@ Een **Godot 4.7.2**-prototype van een virtueel 3D-koffiehuis voor Windows. De af
 
 **TeamSpeak-server:** `Heerlen.MIJNTS3.NL`
 
-> **Versie 0.1: lokaal prototype.** Je kunt rondlopen, de camera draaien, een stoel gebruiken, dansen, naar de radiohoek gaan en TeamSpeak openen. Multiplayer, daadwerkelijke TeamSpeak-spraak in het spel, een live gebruikerslijst en automatisch 3D-positieaudio zijn **nog niet gebouwd**. De 6 aanwezige demo-avatars zijn **geen online gebruikers**.
+> **Versie 0.2: lokaal prototype met Windows-installatie.** Je kunt rondlopen, de camera draaien, een stoel gebruiken, dansen, naar de radiohoek gaan en TeamSpeak openen. Multiplayer, daadwerkelijke TeamSpeak-spraak in het spel, een live gebruikerslijst en automatisch 3D-positieaudio zijn **nog niet gebouwd**. De 6 aanwezige demo-avatars zijn **geen online gebruikers**.
 
 ## ✅ Wat zit er al in?
 
@@ -19,7 +19,7 @@ Een **Godot 4.7.2**-prototype van een virtueel 3D-koffiehuis voor Windows. De af
 - Nederlandstalige HUD: minikaart, navigatie, gebruikersinfo, instellingen.
 - Eigen gebruikersnaam lokaal bewaren in `user://cafe_profiel.cfg`.
 - TeamSpeak-knop opent de normale TeamSpeak-client via `ts3server://Heerlen.MIJNTS3.NL` (indien ondersteund door Windows/TeamSpeak).
-- GitHub Actions-workflow om automatisch een Windows `.exe` te bouwen.
+- GitHub Actions-workflow om automatisch een volledige Windows Setup.exe te bouwen.
 
 ## 🕹 Besturing
 
@@ -35,26 +35,28 @@ Een **Godot 4.7.2**-prototype van een virtueel 3D-koffiehuis voor Windows. De af
 | Knop `Café`, `Dansvloer`, `Radio` | Verplaatsen binnen het café |
 | `Verbind met TeamSpeak` | TeamSpeak 3 openen |
 
-## 💻 Starten op Windows
+## 💻 Voor bezoekers: alleen Setup.exe installeren
 
-1. Download [Godot 4.7.2 voor Windows](https://godotengine.org/download/windows/) (de standaardversie, niet .NET).
-2. Pak dit project uit in een map, bijvoorbeeld `C:\TS-Heerlen-3D-Cafe`.
-3. Start Godot en klik op **Importeren**. Selecteer `project.godot` in die map.
-4. Open het project en druk op **F6** of **F5** om de hoofdscène te starten.
-5. Voor spraak installeer je **TeamSpeak 3** op je Windows-computer, verbind met `Heerlen.MIJNTS3.NL` en stel push-to-talk in binnen TeamSpeak.
+**Geen Godot downloaden en geen projectbestanden openen.** Download de openbare setup (na publicatie op GitHub Releases), dubbelklik op `TS-Heerlen-3D-Cafe-Setup-v0.2.exe` en doorloop de installatie. De app krijgt een vermelding in het Windows Startmenu en desgewenst een bureaubladsnelkoppeling. Verwijderen kan via Windows > Geïnstalleerde apps.
 
-De Godot-app kan zonder extra 3D-server **op één pc** draaien. Dat betekent niet dat meerdere pc's elkaar al kunnen zien.
+- De Godot 4.7.2 **runtime is onderdeel van de geëxporteerde 3D-app**. De editor is alleen nodig tijdens het bouwen, niet voor bezoekers.
+- Voor spraak via `Heerlen.MIJNTS3.NL` moet de bezoeker vooralsnog apart **TeamSpeak 3** installeren en instellen. De knop in het 3D-café opent de TeamSpeak-client als `ts3server://` correct is gekoppeld.
+- Versie 0.2 bouwt voort op het **lokale 3D-prototype**. Er is nog geen live synchronisatie van avatars, ingebouwde spraak, of 3D-positional audio.
+- De installer is voorlopig **niet code-ondertekend**; Windows SmartScreen kan een waarschuwing geven. Deel de setup uitsluitend via de eigen GitHub-repository en controleer herkomst.
 
-## 📦 Windows `.exe` uit GitHub bouwen
+## 📦 Setup.exe automatisch maken op GitHub
 
-Na het uploaden van alle bestanden naar GitHub:
+1. Upload **alle bestanden en mappen** van deze projectmap naar de root van `michiel66/TS-Heerlen-3D-Cafe`. Let op de verborgen map `.github/workflows/windows.yml`.
+2. Open **Actions > TeamSpeak Heerlen - Windows Setup > Run workflow**. De workflow gebruikt GitHub's Windows-runner en installeert Godot 4.7.2 + de officiële exporttemplates **alleen op de buildmachine**.
+3. Godot exporteert het café als `TS-Heerlen-3D-Cafe.exe`. Daarna bouwt Inno Setup er een installeerbare `TS-Heerlen-3D-Cafe-Setup-v0.2.exe` van.
+4. Download onder de workflow-run het artifact `TS-Heerlen-3D-Cafe-Setup-v0.2`. Pak de artifact-ZIP uit; daarin zit de setup die je kunt delen.
+5. **Optioneel publiek maken:** maak een Git-tag `v0.2.0` en push die. De workflow plaatst de setup dan automatisch onder **Releases**, mits GitHub Actions schrijfrechten heeft op repository-inhoud.
 
-1. Open de repository en ga naar **Actions**.
-2. Kies **Build Windows EXE** en klik op **Run workflow**.
-3. Open de voltooide workflow-run en download het artifact `TS-Heerlen-3D-Cafe-Windows`.
-4. Pak de ZIP uit, start de `.exe` in Windows.
+De volledige installer kan niet uit alleen deze GitHub-broncode worden gedownload voordat een build succesvol is uitgevoerd. De Windows-setup is nog niet praktisch getest op een Windows-pc.
 
-De workflow gebruikt Godot 4.7.2 met export templates. Er wordt geen `.exe` gecommit naar de GitHub-broncode.
+## 🛠 Voor ontwikkelaars (optioneel)
+
+Als je zelf de 3D-wereld wilt bewerken, download dan [Godot 4.7.2](https://godotengine.org/download/windows/) en open `project.godot`. Gewone bezoekers hoeven dat niet te doen.
 
 ## 🧩 Projectindeling
 
@@ -71,7 +73,9 @@ TS-Heerlen-3D-Cafe/
 │   └── minimap.gd                Minikaart
 ├── assets/textures/             Lokale, nieuw gemaakte texturen
 ├── docs/voorbeeld-layout.png    Door gebruiker gekozen ontwerpbeeld
-└── .github/workflows/windows.yml
+├── installer.iss                  Inno Setup installer
+├── assets/installer.ico          Installericoon
+└── .github/workflows/windows.yml  Windows Setup build
 ```
 
 ## 🎤 Hoe zit het met TeamSpeak en multiplayer?
