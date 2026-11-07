@@ -1,15 +1,5 @@
-TEAM SPEAK HEERLEN 3D CAFE - VERSION 0.2 (WINDOWS SETUP)
-
-BEZOEKERS:
-Geen Godot installeren. Download na een geslaagde GitHub-build de
-TS-Heerlen-3D-Cafe-Setup-v0.2.exe en doorloop de installatie.
-TeamSpeak 3 blijft voorlopig nodig voor spraak.
-
-EIGENAAR / GITHUB:
-1. Upload alle bestanden inclusief .github/workflows/windows.yml
-2. Ga naar Actions > TeamSpeak Heerlen - Windows Setup > Run workflow
-3. Download artifact TS-Heerlen-3D-Cafe-Setup-v0.2 (bevat de installer)
-4. Optioneel: maak een tag v0.2.0 voor publicatie onder Releases.
-
-Let op: het programma is nog een lokaal prototype en de setup/build
-moet worden getest. Multiplayer is nog niet geïmplementeerd.
+TeamSpeak Heerlen 3D Café v0.3.0
+Upload alle bestanden incl. .github/ naar GitHub.
+GitHub Actions maakt TS-Heerlen-3D-Cafe-Setup-v0.3.exe.
+App: Instellingen -> naam en kanaal -> Verbinden -> druk V voor PTT.
+Geen aparte Teamspeak-plugin nodig. Live audio nog niet op echte server getest.

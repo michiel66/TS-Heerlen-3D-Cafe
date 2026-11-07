@@ -1,97 +1,47 @@
-# ☕ TeamSpeak Heerlen – 3D Café
+# TeamSpeak Heerlen 3D Café v0.3 – Direct TeamSpeak proefversie
 
-![Visueel doelbeeld van het café](docs/voorbeeld-layout.png)
+**Een Windows-setup, geen TeamSpeak 3-plugin en geen losse 3D-server.**
 
-Een **Godot 4.7.2**-prototype van een virtueel 3D-koffiehuis voor Windows. De afbeelding hierboven is de **referentie/look**, geen screenshot van de huidige 3D-app. De ruimte in het project is opgebouwd uit echte 3D-objecten, zodat je er kunt rondlopen.
+De huidige Godot-caféwereld (bar, tafels, avatar, dansvloer, minimap en knoppen) blijft behouden. De setup bevat nu ook een lokale Node.js-sidecar die rechtstreeks met `Heerlen.MIJNTS3.NL` kan verbinden via de open-source `@honeybbq/teamspeak-client` bibliotheek, net als de PTT-Crosslink-software.
 
-**TeamSpeak-server:** `Heerlen.MIJNTS3.NL`
+## Wat nieuw is
 
-> **Versie 0.2.1: lokaal prototype met Windows-installatie.** Je kunt rondlopen, de camera draaien, een stoel gebruiken, dansen, naar de radiohoek gaan en TeamSpeak openen. Multiplayer, daadwerkelijke TeamSpeak-spraak in het spel, een live gebruikerslijst en automatisch 3D-positieaudio zijn **nog niet gebouwd**. De 6 aanwezige demo-avatars zijn **geen online gebruikers**.
+- TeamSpeak-verbinden en verbreken in het café zelf (zonder gewone TeamSpeak-client of plugin)
+- TeamSpeak-naam en optionele kanaalnaam via **Instellingen**
+- Live server-gebruikerslijst via `listClients`, en actualiseren bij binnenkomen, verplaatsen en vertrekken
+- Sprekerindicator in het live-gebruikerspaneel (tijdens ontvangen audiopakketten)
+- **V ingedrukt houden** om te praten; onderbalkknop schakelt PTT handmatig aan/uit
+- Microfoon-capture in Godot, PCM/Opus-transcodering in lokale Node-module, ontvangen spraak via Godot-speakergenerator
+- Eenmalige beveiligingstoken voor de lokale websocket op `127.0.0.1:39453`
+- TeamSpeak-identiteit wordt op de eigen pc lokaal opgeslagen; geen wachtwoord wordt meegeleverd
+- GitHub Actions bouwt zelfstandige Windows-exe met ingebouwde spraakmodule en Inno Setup-installer
 
-## Reparatie leeg opstartvenster v0.2.1
+## Voor bezoekers
 
-Zie [REPARATIE-v0.2.1.md](REPARATIE-v0.2.1.md). De Windows-build bevat nu een echte Godot-smoketest die een leeg venster door een ongeldige startscene afvangt.
+1. Installeer de nieuwe `TS-Heerlen-3D-Cafe-Setup-v0.3.exe` uit GitHub Actions.
+2. Start **TeamSpeak Heerlen 3D Café** (zonder losse Godot/Node/TS3-plugin).
+3. Open **Instellingen** om je gebruikersnaam en eventueel TeamSpeak-kanaal in te vullen. Klik **Naam opslaan**.
+4. Klik **VERBIND MET TEAMSPEAK**. Het paneel links vult de actuele gebruikerslijst.
+5. Gebruik **V** ingedrukt om te spreken, of klik **Praten (PTT)** voor aan/uit. Gebruik bij voorkeur een headset.
 
-## ✅ Wat zit er al in?
+**TeamSpeak-privacy:** de app maakt een eigen directe TeamSpeak-clientverbinding. Op dezelfde pc kan daarnaast nog de gewone TeamSpeak-client draaien, maar gebruik die niet tegelijk in hetzelfde kanaal met open microfoon om echo te voorkomen.
 
-- Zelf opgebouwd 3D-koffiehuis met houten vloer, bakstenen wand, grote ramen en sfeerverlichting.
-- Koffiebar met koffiezetapparaten, barkrukken en schappen.
-- Tafels, stoelen, zithoek, kamerplanten en decoratieve verlichting.
-- Dansvloer met gekleurde vloertegels en decoratieve avatars.
-- Radiohoek met 27MC-thema.
-- Bestuurbare third-person avatar, rondkijken en zit/interactieknop.
-- Nederlandstalige HUD: minikaart, navigatie, gebruikersinfo, instellingen.
-- Eigen gebruikersnaam lokaal bewaren in `user://cafe_profiel.cfg`.
-- TeamSpeak-knop opent de normale TeamSpeak-client via `ts3server://Heerlen.MIJNTS3.NL` (indien ondersteund door Windows/TeamSpeak).
-- GitHub Actions-workflow om automatisch een volledige Windows Setup.exe te bouwen.
+## Voor ontwikkelaars / GitHub
 
-## 🕹 Besturing
+Upload de **inhoud** van deze projectmap naar de repository-root `michiel66/TS-Heerlen-3D-Cafe`, met de verborgen map `.github`. De build gebruikt Godot 4.7.2, Node.js 22 en Inno Setup 6. In GitHub **Actions → TeamSpeak Heerlen - Windows Setup** kan de nieuwe Windows-installer worden opgehaald.
 
-| Toets | Actie |
-|---|---|
-| `W A S D` | Lopen |
-| Rechtermuisknop ingedrukt + muis | Camera draaien |
-| Muiswiel | Zoom |
-| `E` | Gaan zitten / opstaan bij een stoel |
-| `F` | Dansbeweging aan/uit |
-| `R` | Naar de ingang |
-| `F2` | Lokale notities (nog geen echte chat) |
-| Knop `Café`, `Dansvloer`, `Radio` | Verplaatsen binnen het café |
-| `Verbind met TeamSpeak` | TeamSpeak 3 openen |
+Tests in dit pakket: `node --test bridge/tests/*.test.cjs` slaagt in deze omgeving. De Godot-runtime en echte TeamSpeak-server konden hier **niet live worden getest**; werkende bidirectionele spraak en online deelnemers moeten daarom na de GitHub-build op twee Windows-computers worden gevalideerd. De build voert een Godot-starttest uit.
 
-## 💻 Voor bezoekers: alleen Setup.exe installeren
+## Bekende beperkingen
 
-**Geen Godot downloaden en geen projectbestanden openen.** Download de openbare setup (na publicatie op GitHub Releases), dubbelklik op `TS-Heerlen-3D-Cafe-Setup-v0.2.1.1.exe` en doorloop de installatie. De app krijgt een vermelding in het Windows Startmenu en desgewenst een bureaubladsnelkoppeling. Verwijderen kan via Windows > Geïnstalleerde apps.
+- Er is **geen server voor avatarpositie-synchronisatie**. Zes personages in het café blijven decoratieve demo-avatars, niet gekoppeld aan echte TeamSpeak-gebruikers. Alleen de gebruikerslijst is live.
+- Bij gelijktijdige sprekers wordt voorlopig slechts één ontvangststream kort achter elkaar weergegeven om onbegrijpelijke audio te vermijden. Multispeaker-mixen is een volgende stap.
+- TeamSpeak-kanaal wordt bij verbinden gekozen. Kanaal wisselen: verbreek de verbinding, wijzig kanaalnaam en verbind opnieuw.
+- Specifieke server- en kanaalwachtwoorden worden nog niet ondersteund in deze proefversie.
+- Spraakvertraging, audio-onderbrekingen, Windows-microfoonrechten en Opus codec 5 moeten in echte tests worden gecontroleerd.
+- Ongetekende setup kan een Windows SmartScreen-waarschuwing geven. Publiceer alleen via je eigen gecontroleerde GitHub-repository.
+- Ontwerpafbeelding `docs/voorbeeld-layout.png` blijft een **doelbeeld**, geen exacte screenshot van de realtime 3D-caféwereld.
 
-- De Godot 4.7.2 **runtime is onderdeel van de geëxporteerde 3D-app**. De editor is alleen nodig tijdens het bouwen, niet voor bezoekers.
-- Voor spraak via `Heerlen.MIJNTS3.NL` moet de bezoeker vooralsnog apart **TeamSpeak 3** installeren en instellen. De knop in het 3D-café opent de TeamSpeak-client als `ts3server://` correct is gekoppeld.
-- Versie 0.2 bouwt voort op het **lokale 3D-prototype**. Er is nog geen live synchronisatie van avatars, ingebouwde spraak, of 3D-positional audio.
-- De installer is voorlopig **niet code-ondertekend**; Windows SmartScreen kan een waarschuwing geven. Deel de setup uitsluitend via de eigen GitHub-repository en controleer herkomst.
+### Techniek en licenties
 
-## 📦 Setup.exe automatisch maken op GitHub
-
-1. Upload **alle bestanden en mappen** van deze projectmap naar de root van `michiel66/TS-Heerlen-3D-Cafe`. Let op de verborgen map `.github/workflows/windows.yml`.
-2. Open **Actions > TeamSpeak Heerlen - Windows Setup > Run workflow**. De workflow gebruikt GitHub's Windows-runner en installeert Godot 4.7.2 + de officiële exporttemplates **alleen op de buildmachine**.
-3. Godot exporteert het café als `TS-Heerlen-3D-Cafe.exe`. Daarna bouwt Inno Setup er een installeerbare `TS-Heerlen-3D-Cafe-Setup-v0.2.1.1.exe` van.
-4. Download onder de workflow-run het artifact `TS-Heerlen-3D-Cafe-Setup-v0.2.1`. Pak de artifact-ZIP uit; daarin zit de setup die je kunt delen.
-5. **Optioneel publiek maken:** maak een Git-tag `v0.2.0` en push die. De workflow plaatst de setup dan automatisch onder **Releases**, mits GitHub Actions schrijfrechten heeft op repository-inhoud.
-
-De volledige installer kan niet uit alleen deze GitHub-broncode worden gedownload voordat een build succesvol is uitgevoerd. De Windows-setup is nog niet praktisch getest op een Windows-pc.
-
-## 🛠 Voor ontwikkelaars (optioneel)
-
-Als je zelf de 3D-wereld wilt bewerken, download dan [Godot 4.7.2](https://godotengine.org/download/windows/) en open `project.godot`. Gewone bezoekers hoeven dat niet te doen.
-
-## 🧩 Projectindeling
-
-```text
-TS-Heerlen-3D-Cafe/
-├── project.godot                  Godot hoofdproject
-├── export_presets.cfg            Windows exportinstellingen
-├── scenes/main.tscn              Hoofdscène
-├── scripts/
-│   ├── main.gd                   Camera, acties, TeamSpeak-startknop
-│   ├── world.gd                  Café, bar, stoelen, dansvloer, verlichting
-│   ├── avatar.gd                 Avatar, bewegen, zitten, dansen
-│   ├── hud.gd                    Gebruikersinterface
-│   └── minimap.gd                Minikaart
-├── assets/textures/             Lokale, nieuw gemaakte texturen
-├── docs/voorbeeld-layout.png    Door gebruiker gekozen ontwerpbeeld
-├── installer.iss                  Inno Setup installer
-├── assets/installer.ico          Installericoon
-└── .github/workflows/windows.yml  Windows Setup build
-```
-
-## 🎤 Hoe zit het met TeamSpeak en multiplayer?
-
-TeamSpeak 3 transporteert **spraak**, maar verstuurt niet vanzelf 3D-posities naar Godot. Dit prototype start de normale TeamSpeak 3-client, maar bevat nog **geen** `.dll`-plugin en toont geen live TeamSpeak-data.
-
-Als we daarna **zonder een aparte 3D-server** willen bouwen, kunnen we experimenteel de TeamSpeak 3 Client Plugin SDK gebruiken voor kleine avatarpositie-berichten tussen plugin-gebruikers in hetzelfde TeamSpeak-kanaal. Dat moet getest worden met twee Windows-computers en de server-floodlimieten; het is niet gegarandeerd voldoende voor vloeiend multiplayer. Zie [TEAM SPEAK INTEGRATIE](docs/TEAMSPEAK-INTEGRATIE.md).
-
-## 📜 Licenties
-
-De projectcode en de gegenereerde textures vallen onder MIT (`LICENSE`). De illustratie in `docs/voorbeeld-layout.png` is als door de gebruiker aangeleverde ontwerp-referentie opgenomen. De afbeelding is **geen vrij te hergebruiken 3D-model**. De TeamSpeak-naam en -merken zijn van hun respectievelijke rechthebbenden. Dit communityproject is niet officieel aangesloten bij TeamSpeak Systems.
-
-## 🧪 Status
-
-Het project is als broncode geleverd. Het is in deze omgeving **niet met de Godot-editor opgestart of op Windows getest**; voer de eerste import en build uit in Godot of via de GitHub Actions-workflow. Problemen kunnen worden gemeld via GitHub Issues.
+De nieuwe bridge gebruikt `@honeybbq/teamspeak-client` 0.3.3 (MIT), `opusscript` 0.1.1 (MIT), `ws` 8.18.3 (MIT). De software is geen officiële TeamSpeak-client. De afhankelijkheden en hun licentiegegevens worden met de Windows-setup meegeleverd vanuit `node_modules`. Alleen voor de build moet GitHub npm kunnen bereiken.

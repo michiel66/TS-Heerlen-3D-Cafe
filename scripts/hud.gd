@@ -4,10 +4,19 @@ extends CanvasLayer
 
 signal action_requested(action: String)
 signal nickname_changed(value: String)
+signal channel_changed(value: String)
 
 const MINIMAP_SCRIPT = preload("res://scripts/minimap.gd")
 var avatar: Node3D
 var nickname: String = "Bezoeker"
+var current_channel: String = ""
+var ts_connected := false
+var live_users: Array = []
+var talker_id := ""
+var talker_deadline := 0
+var connect_button: Button
+var users_preview: Label
+var channel_entry: LineEdit
 var root: Control
 var online_label: Label
 var status_label: Label
@@ -62,17 +71,19 @@ func _top_left() -> void:
     var vertical := VBoxContainer.new()
     vertical.add_theme_constant_override("separation", 8)
     panel.add_child(vertical)
-    online_label = _lbl("●  AANWEZIG: 1 LOKAAL", 17, Color("7ff4a4"))
+    online_label = _lbl("●  TEAMSPEAK OFFLINE", 17, Color("ffb577"))
     vertical.add_child(online_label)
     vertical.add_child(HSeparator.new())
     vertical.add_child(_lbl("•  " + nickname + " (jij)", 16, Color("f3f1ef")))
-    vertical.add_child(_lbl("6 demo-avatars in het café", 13, Color("c7a37c")))
-    vertical.add_child(_lbl("Niet gekoppeld aan TS3-online", 12, Color("aaaaaf")))
-    var connect := Button.new()
-    connect.text = "🎤  VERBIND MET TEAMSPEAK"
-    connect.add_theme_font_size_override("font_size", 13)
-    connect.pressed.connect(func() -> void: action_requested.emit("teamspeak"))
-    vertical.add_child(connect)
+    vertical.add_child(_lbl("6 decoratieve demo-avatars", 12, Color("c7a37c")))
+    users_preview = _lbl("Nog geen live TS3-gebruikers", 13, Color("eeeeee"))
+    users_preview.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    vertical.add_child(users_preview)
+    connect_button = Button.new()
+    connect_button.text = "🎙 VERBIND MET TEAMSPEAK"
+    connect_button.add_theme_font_size_override("font_size", 13)
+    connect_button.pressed.connect(func() -> void: action_requested.emit("teamspeak"))
+    vertical.add_child(connect_button)
 
 func _top_right() -> void:
     var panel := PanelContainer.new()
@@ -183,6 +194,11 @@ func _overlay() -> void:
     save.pressed.connect(_save_nickname)
     body.add_child(save)
     nickname_entry.set_meta("save_button", save)
+    channel_entry = LineEdit.new()
+    channel_entry.placeholder_text = "TeamSpeak-kanaal (leeg = standaardkanaal)"
+    channel_entry.text = current_channel
+    channel_entry.visible = false
+    body.add_child(channel_entry)
     chat_entry = LineEdit.new()
     chat_entry.placeholder_text = "Lokale notitie typen (geen chatbericht naar anderen)"
     chat_entry.visible = false
@@ -190,7 +206,7 @@ func _overlay() -> void:
     body.add_child(chat_entry)
 
 func _button_action(action: String) -> void:
-    if action in ["cafe", "dance", "radio", "teamspeak"]:
+    if action in ["cafe", "dance", "radio", "teamspeak", "ptt"]:
         overlay.visible = false
         action_requested.emit(action)
         return
@@ -203,6 +219,8 @@ func _save_nickname() -> void:
         return
     nickname = fresh
     nickname_changed.emit(fresh)
+    current_channel = channel_entry.text.strip_edges().substr(0, 120)
+    channel_changed.emit(current_channel)
     set_status("Naam ingesteld: " + fresh)
     overlay.visible = false
 
@@ -217,6 +235,7 @@ func show_panel(action: String) -> void:
     overlay.visible = true
     chat_entry.visible = false
     nickname_entry.visible = false
+    channel_entry.visible = false
     (nickname_entry.get_meta("save_button") as Button).visible = false
     match action:
         "chat":
@@ -226,21 +245,22 @@ func show_panel(action: String) -> void:
             chat_entry.grab_focus()
         "ptt":
             overlay_title.text = "Push-to-talk"
-            overlay_text.text = "Spraak wordt niet door deze app verwerkt.\nStart TeamSpeak 3 en stel je PTT-toets in bij TeamSpeak > Opties > Opname.\nDe PTT-knop hieronder is informatief, niet gekoppeld aan de microfoon."
+            overlay_text.text = "Houd V ingedrukt om te praten als je verbonden bent.\nDe PTT-knop in de onderbalk schakelt de microfoon aan/uit.\nGebruik een headset om terugkoppeling te voorkomen."
         "users":
-            overlay_title.text = "Gebruikers"
-            overlay_text.text = "1 lokale speler: " + nickname + "\n6 decoratieve demo-avatars (geen echte gebruikers).\n\nDe TeamSpeak-gebruikerslijst wordt pas mogelijk na koppeling met de TS3 Client Plugin SDK."
+            overlay_title.text = "Live TeamSpeak-gebruikers"
+            overlay_text.text = _roster_text()
         "locations":
             overlay_title.text = "Locaties"
             overlay_text.text = "Café: koffiebar en zitplaatsen.\nDansvloer: verlichte danshoek achterin.\nRadiohoek: 27MC en TeamSpeak-presentatie.\n\nKlik de knoppen onderaan om te lopen naar een andere plek."
         "settings":
-            overlay_title.text = "Instellingen"
-            overlay_text.text = "Stel je gebruikersnaam in. Deze wordt lokaal op je computer opgeslagen."
+            overlay_title.text = "TeamSpeak-instellingen"
+            overlay_text.text = "Stel je gebruikersnaam en optioneel een TS3-kanaalnaam in. Wijzigingen gelden na opnieuw verbinden."
             nickname_entry.visible = true
+            channel_entry.visible = true
             (nickname_entry.get_meta("save_button") as Button).visible = true
         _:
             overlay_title.text = "TeamSpeak Heerlen 3D Café"
-            overlay_text.text = "Speelbaar lokaal 3D-café in Godot 4.7.2.\nGeen aparte 3D-server nodig voor deze demo.\n\nTeamSpeak openen: ts3server://Heerlen.MIJNTS3.NL\nMultiplayer en positional audio: nog NIET geïmplementeerd."
+            overlay_text.text = "Godot 3D-café met een ingebouwde, lokale TeamSpeak-client via PTT-Crosslink-techniek.\nLive TeamSpeak-leden zijn geen gesynchroniseerde 3D-personages.\nGeen aparte 3D-server; nog geen echte multiplayer-positie-synchronisatie."
 
 func set_status(text: String) -> void:
     if is_instance_valid(status_label):
@@ -252,3 +272,53 @@ func set_nickname(name_value: String) -> void:
         nickname_entry.text = name_value
     if is_instance_valid(online_label):
         online_label.text = "●  AANWEZIG: 1 LOKAAL"
+
+func set_ts_status(is_online: bool, message: String) -> void:
+    ts_connected = is_online
+    if is_instance_valid(connect_button):
+        connect_button.text = "● VERBREEK TEAMSPEAK" if is_online else "🎙 VERBIND MET TEAMSPEAK"
+    if is_instance_valid(online_label):
+        online_label.text = ("● TS3 ONLINE" if is_online else "● TS3 OFFLINE") + " · " + str(live_users.size()) + " gebruikers"
+        online_label.add_theme_color_override("font_color", Color("7ff4a4") if is_online else Color("ffb577"))
+    set_status(message)
+
+func set_live_roster(users: Array) -> void:
+    live_users = users
+    if is_instance_valid(online_label):
+        online_label.text = ("● TS3 ONLINE" if ts_connected else "● TS3 OFFLINE") + " · " + str(users.size()) + " gebruikers"
+    if is_instance_valid(users_preview):
+        var names: Array[String] = []
+        for u in users.slice(0, 10):
+            if typeof(u) == TYPE_DICTIONARY:
+                names.append("● " + str(u.get("name", "Onbekend")))
+        users_preview.text = "\n".join(names) if not names.is_empty() else "Geen gebruikerslijst beschikbaar"
+    if is_instance_valid(overlay) and overlay.visible and overlay_title.text == "Live TeamSpeak-gebruikers":
+        overlay_text.text = _roster_text()
+
+func _roster_text() -> String:
+    var names: Array[String] = []
+    for u in live_users.slice(0, 24):
+        if typeof(u) == TYPE_DICTIONARY:
+            var marker := "🎙 " if str(u.get("id","")) == talker_id else "• "
+            names.append(marker + str(u.get("name", "Onbekend")))
+    if names.is_empty():
+        return "Nog geen serverleden beschikbaar. Verbind eerst met TeamSpeak Heerlen."
+    return "".join(["TeamSpeak-server: Heerlen.MIJNTS3.NL\n", "\n".join(names), "\n\nDemo-avatars in het café zijn NIET aan deze namen gekoppeld."])
+
+func set_live_talker(id: String) -> void:
+    talker_id = id
+    talker_deadline = Time.get_ticks_msec() + 1100
+    if is_instance_valid(overlay) and overlay.visible and overlay_title.text == "Live TeamSpeak-gebruikers":
+        overlay_text.text = _roster_text()
+
+func set_ptt_state(active: bool) -> void:
+    if active:
+        set_status("🎙 PTT AAN – je microfoon wordt uitgezonden")
+    elif ts_connected:
+        set_status("PTT UIT – druk V om te praten, of gebruik de PTT-knop")
+
+func _process(_delta: float) -> void:
+    if not talker_id.is_empty() and Time.get_ticks_msec() > talker_deadline:
+        talker_id = ""
+        if is_instance_valid(overlay) and overlay.visible and overlay_title.text == "Live TeamSpeak-gebruikers":
+            overlay_text.text = _roster_text()

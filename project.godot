@@ -57,3 +57,7 @@ chat={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":4194333)]
 }
+
+[audio]
+driver/enable_input=true
+driver/mix_rate=48000

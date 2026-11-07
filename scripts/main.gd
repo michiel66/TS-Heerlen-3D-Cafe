@@ -5,7 +5,7 @@ extends Node3D
 const WORLD_SCRIPT = preload("res://scripts/world.gd")
 const AVATAR_SCRIPT = preload("res://scripts/avatar.gd")
 const HUD_SCRIPT = preload("res://scripts/hud.gd")
-const SERVER_URI := "ts3server://Heerlen.MIJNTS3.NL"
+const BRIDGE_SCRIPT = preload("res://scripts/teamspeak_bridge.gd")
 
 var player
 var camera: Camera3D
@@ -15,11 +15,14 @@ var pitch := 0.22
 var zoom := 5.2
 var mouse_turning := false
 var profile := ConfigFile.new()
+var voice
+var current_channel := ""
 
 func _ready() -> void:
     var nick := "Bezoeker"
     if profile.load("user://cafe_profiel.cfg") == OK:
         nick = str(profile.get_value("profile", "nickname", nick))
+    current_channel = str(profile.get_value("profile", "channel", ""))
     var cafe = WORLD_SCRIPT.new()
     cafe.name = "CafeWorld"
     add_child(cafe)
@@ -38,9 +41,17 @@ func _ready() -> void:
     hud.name = "CafeHUD"
     hud.avatar = player
     hud.nickname = nick
+    hud.current_channel = current_channel
     add_child(hud)
+    voice = BRIDGE_SCRIPT.new()
+    voice.name = "LocalTeamSpeakBridge"
+    add_child(voice)
+    voice.status_updated.connect(_voice_status)
+    voice.roster_updated.connect(_voice_roster)
+    voice.voice_active.connect(_voice_talking)
     hud.action_requested.connect(_ui_action)
     hud.nickname_changed.connect(_update_nickname)
+    hud.channel_changed.connect(_update_channel)
     # Verberg het fout-/startscherm pas nadat camera, wereld en HUD zijn aangemaakt.
     var boot: CanvasLayer = get_node_or_null("BootScreen") as CanvasLayer
     if boot != null:
@@ -70,6 +81,9 @@ func _unhandled_input(event: InputEvent) -> void:
     elif event is InputEventMouseMotion and mouse_turning:
         yaw -= event.relative.x * 0.005
         pitch = clampf(pitch + event.relative.y * 0.004, -0.5, 0.55)
+    if event is InputEventKey and not event.echo and event.physical_keycode == KEY_V:
+        voice.set_ptt(event.pressed)
+        hud.set_ptt_state(voice.ptt)
     if event.is_action_pressed("interact") and not event.is_echo():
         _interact()
     elif event.is_action_pressed("emote") and not event.is_echo():
@@ -105,11 +119,14 @@ func _interact() -> void:
 func _ui_action(action: String) -> void:
     match action:
         "teamspeak":
-            var result := OS.shell_open(SERVER_URI)
-            if result == OK:
-                hud.set_status("TeamSpeak-link geopend. TeamSpeak 3 moet geïnstalleerd zijn.")
+            if voice.connected:
+                voice.disconnect_teamspeak()
+                hud.set_status("TeamSpeak-verbinding wordt verbroken.")
             else:
-                hud.set_status("Geen TeamSpeak-linkhandler gevonden. Open TeamSpeak handmatig: Heerlen.MIJNTS3.NL")
+                voice.connect_teamspeak(hud.nickname, hud.current_channel)
+        "ptt":
+            voice.set_ptt(not voice.ptt)
+            hud.set_ptt_state(voice.ptt)
         "cafe":
             _teleport(Vector3(2.3, 0.15, 5.8), "Welkom terug in het café.")
         "dance":
@@ -132,3 +149,21 @@ func _update_nickname(new_name: String) -> void:
             (node as Label3D).text = new_name
     profile.set_value("profile", "nickname", new_name)
     profile.save("user://cafe_profiel.cfg")
+
+func _voice_status(is_connected: bool, message: String) -> void:
+    hud.set_ts_status(is_connected, message)
+    hud.set_status(message)
+    if not is_connected:
+        hud.set_ptt_state(false)
+
+func _voice_roster(users: Array) -> void:
+    hud.set_live_roster(users)
+
+func _voice_talking(id: String) -> void:
+    hud.set_live_talker(id)
+
+func _update_channel(name_value: String) -> void:
+    current_channel = name_value
+    profile.set_value("profile", "channel", current_channel)
+    profile.save("user://cafe_profiel.cfg")
+    hud.set_status("Kanaal opgeslagen. Verbreek en verbind opnieuw om te wisselen.")

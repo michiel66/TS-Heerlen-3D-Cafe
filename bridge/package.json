@@ -1,0 +1,13 @@
+{
+  "name": "ts-heerlen-cafe-bridge",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Lokale zelfstandige TeamSpeak 3 bridge voor het 3D cafe, geen clientplugin",
+  "main": "main.cjs",
+  "scripts": { "start": "node main.cjs", "test": "node --test tests/*.test.cjs" },
+  "dependencies": {
+    "@honeybbq/teamspeak-client": "0.3.3",
+    "opusscript": "0.1.1",
+    "ws": "8.18.3"
+  }
+}
