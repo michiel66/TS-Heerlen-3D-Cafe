@@ -71,7 +71,27 @@ jobs:
             throw 'Windows x64 exporttemplate ontbreekt.'
           }
 
-          Write-Host 'Godot exporttemplates geïnstalleerd.'
+          Write-Host 'Godot exporttemplates geinstalleerd.'
+
+      - name: Installeer Node.js voor bridge build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installeer TS3-protocol en Opus-afhankelijkheden
+        shell: pwsh
+        run: |
+          npm install --prefix bridge --omit=dev --no-audit --no-fund
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Bridge npm installatie mislukt'
+          }
+
+          npm test --prefix bridge
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Bridge tests mislukt'
+          }
 
       - name: Importeer 3D-cafe project
         shell: pwsh
@@ -79,7 +99,7 @@ jobs:
           & $env:GODOT_BIN --headless --editor --import --path . --quit
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Godot projectimport mislukt. Controleer de GDScript-fouten.'
+            throw 'Godot projectimport mislukt; controleer GDScript fouten in het log.'
           }
 
       - name: Test of 3D-cafe en menu echt starten
@@ -91,6 +111,7 @@ jobs:
             if (Test-Path 'startup-check.log') {
               Get-Content 'startup-check.log' -Tail 100
             }
+
             throw 'De cafe-starttest is mislukt. Setup.exe wordt NIET gemaakt.'
           }
 
@@ -102,7 +123,7 @@ jobs:
           & $env:GODOT_BIN --headless --path . --export-release 'Windows Desktop' 'dist/TS-Heerlen-3D-Cafe.exe'
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Godot export mislukt. Controleer het log.'
+            throw 'Godot export mislukt; controleer het log.'
           }
 
           if (-not (Test-Path 'dist/TS-Heerlen-3D-Cafe.exe')) {
@@ -110,6 +131,32 @@ jobs:
           }
 
           Get-Item 'dist/TS-Heerlen-3D-Cafe.exe' | Select-Object Name, Length
+
+      - name: Verpak lokale TeamSpeak-module in app
+        shell: pwsh
+        run: |
+          $runtime = 'dist/bridge-runtime'
+
+          New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+
+          $node = (Get-Command node.exe).Source
+
+          Copy-Item -LiteralPath $node -Destination "$runtime/node.exe"
+          Copy-Item -LiteralPath 'bridge/main.cjs' -Destination "$runtime/main.cjs"
+          Copy-Item -LiteralPath 'bridge/protocol.cjs' -Destination "$runtime/protocol.cjs"
+          Copy-Item -LiteralPath 'bridge/package.json' -Destination "$runtime/package.json"
+
+          Copy-Item -Path 'bridge/node_modules' -Destination "$runtime/node_modules" -Recurse
+
+          if (!(Test-Path "$runtime/node_modules/opusscript")) {
+            throw 'Opus codec ontbreekt'
+          }
+
+          if (!(Test-Path "$runtime/node_modules/@honeybbq/teamspeak-client")) {
+            throw 'TeamSpeak-client ontbreekt'
+          }
+
+          Write-Host 'Lokale TS3-bridge en Node runtime verpakt.'
 
       - name: Installeer Inno Setup
         shell: pwsh
@@ -119,7 +166,9 @@ jobs:
             'C:\Program Files\Inno Setup 6\ISCC.exe'
           )
 
-          $compiler = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          $compiler = $paths | Where-Object {
+            Test-Path $_
+          } | Select-Object -First 1
 
           if (-not $compiler) {
             choco install innosetup -y --no-progress
@@ -128,7 +177,9 @@ jobs:
               throw 'Inno Setup installatie mislukt.'
             }
 
-            $compiler = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+            $compiler = $paths | Where-Object {
+              Test-Path $_
+            } | Select-Object -First 1
           }
 
           if (-not $compiler) {
@@ -146,7 +197,7 @@ jobs:
             throw 'Inno Setup compile mislukt.'
           }
 
-          $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.1.exe'
+          $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.3.exe'
 
           if (-not (Test-Path $setup)) {
             throw 'Setup.exe ontbreekt.'
@@ -157,8 +208,8 @@ jobs:
       - name: Download Windows-installer
         uses: actions/upload-artifact@v4
         with:
-          name: TS-Heerlen-3D-Cafe-Setup-v0.2.1
-          path: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.1.exe
+          name: TS-Heerlen-3D-Cafe-Setup-v0.3
+          path: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.3.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -166,5 +217,5 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.1.exe
+          files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.3.exe
           generate_release_notes: true
