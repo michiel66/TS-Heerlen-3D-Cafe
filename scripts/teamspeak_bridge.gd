@@ -2,6 +2,7 @@
 extends Node
 ## TeamSpeak Heerlen v0.4
 ## Lokale TeamSpeak-module zonder aparte clientplugin.
+## FIX: ongeldige handshake_timeout verwijderd.
 
 signal status_updated(connected: bool, text: String)
 signal roster_updated(
@@ -68,9 +69,11 @@ func _setup_audio() -> void:
 
 func _launch_bridge() -> void:
     var exe_path: String = OS.get_executable_path().get_base_dir()
+
     var node_exe: String = exe_path.path_join(
         "voice-bridge"
     ).path_join("node.exe")
+
     var source: String = exe_path.path_join(
         "voice-bridge"
     ).path_join("main.cjs")
@@ -106,8 +109,9 @@ func _try_socket() -> void:
     if pid <= 0:
         return
 
+    # Godot 4.7.2 FIX:
+    # WebSocketPeer heeft geen handshake_timeout.
     socket = WebSocketPeer.new()
-    socket.handshake_timeout = 4.0
 
     var err: int = socket.connect_to_url(
         "ws://127.0.0.1:%d" % PORT
@@ -122,6 +126,7 @@ func _try_socket() -> void:
 func _process(delta: float) -> void:
     if socket != null:
         socket.poll()
+
         var state: int = socket.get_ready_state()
 
         if state == WebSocketPeer.STATE_OPEN and not authenticated:
@@ -133,7 +138,8 @@ func _process(delta: float) -> void:
 
         if state == WebSocketPeer.STATE_OPEN:
             var count: int = mini(
-                socket.get_available_packet_count(), 100
+                socket.get_available_packet_count(),
+                100
             )
 
             for i in range(count):
@@ -188,13 +194,15 @@ func _receive(raw: String) -> void:
                 ptt = false
 
             status_updated.emit(
-                connected, last_message
+                connected,
+                last_message
             )
 
         "error":
             last_message = str(
                 message.get("message", "Onbekende fout")
             )
+
             status_updated.emit(
                 connected,
                 "TeamSpeak: " + last_message
@@ -246,6 +254,7 @@ func disconnect_teamspeak() -> void:
 
 func set_ptt(active: bool) -> void:
     ptt = active and connected
+
     _send({
         "type": "ptt",
         "active": ptt
@@ -277,6 +286,7 @@ func _pump_microphone() -> void:
                 -1.0,
                 1.0
             )
+
             var pcm: int = clampi(
                 int(round(s * 32767.0)),
                 -32768,
@@ -318,7 +328,8 @@ func _queue_pcm(encoded: String) -> void:
         )
 
         frames[i] = Vector2(
-            normalized, normalized
+            normalized,
+            normalized
         )
 
     incoming.append(frames)
