@@ -52,6 +52,10 @@ jobs:
             throw 'Godot start niet.'
           }
 
+      # ==========================================
+      # GODOT EXPORT TEMPLATES
+      # ==========================================
+
       - name: Installeer Godot exporttemplates
         shell: pwsh
         run: |
@@ -236,10 +240,10 @@ jobs:
             Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       # ==========================================
-      # WINDOWS SETUP v0.6 BOUWEN
+      # WINDOWS SETUP v0.7 BOUWEN
       # ==========================================
 
-      - name: Maak TeamSpeak Heerlen Setup.exe v0.6
+      - name: Maak TeamSpeak Heerlen Setup.exe v0.7
         shell: pwsh
         run: |
           & $env:ISCC_PATH 'installer.iss'
@@ -248,35 +252,35 @@ jobs:
             throw 'Windows-installer bouwen mislukt.'
           }
 
-          $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.6.exe'
+          $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.7.exe'
 
           if (-not (Test-Path $setup)) {
-            throw 'Setup.exe v0.6 ontbreekt.'
+            throw 'Setup.exe v0.7 ontbreekt.'
           }
 
-          Write-Host 'WINDOWS SETUP v0.6 GEREED'
+          Write-Host 'WINDOWS SETUP v0.7 GEREED'
 
           Get-Item $setup | Select-Object Name, Length
 
       # ==========================================
-      # WINDOWS SETUP v0.6 UPLOADEN
+      # WINDOWS SETUP v0.7 UPLOADEN
       # ==========================================
 
-      - name: Upload Windows Setup v0.6
+      - name: Upload Windows Setup v0.7
         uses: actions/upload-artifact@v4
         with:
-          name: TS-Heerlen-3D-Cafe-Setup-v0.6
-          path: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.6.exe
+          name: TS-Heerlen-3D-Cafe-Setup-v0.7
+          path: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.7.exe
           if-no-files-found: error
           retention-days: 30
 
       # ==========================================
-      # GITHUB RELEASE
+      # GITHUB RELEASE v0.7
       # ==========================================
 
-      - name: Publiceer GitHub Release v0.6
+      - name: Publiceer GitHub Release v0.7
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.6.exe
+          files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.7.exe
           generate_release_notes: true
