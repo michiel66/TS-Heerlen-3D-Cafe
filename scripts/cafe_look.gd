@@ -1,5 +1,5 @@
 extends Node3D
-## TeamSpeak Heerlen 3D Café – uiterlijke update v0.5
+## TeamSpeak Heerlen 3D Café – zichtbare uiterlijkfix v0.5.1
 ## Staat los van TeamSpeak, online gebruikers, microfoon en PTT.
 ## Gebruikt uitsluitend Godot 4.x-procedurele vormen en materialen.
 
@@ -24,10 +24,16 @@ func _install() -> void:
 
     if cafe != null:
         _decorate_cafe(cafe)
+        _make_entrance(cafe)
+    else:
+        push_warning("CafeLook v0.5.1: CafeWorld niet gevonden")
     if hud != null:
         _restyle_hud(hud)
+        _add_version_banner(hud)
+    else:
+        push_warning("CafeLook v0.5.1: CafeHUD niet gevonden")
 
-    print("HEERLEN LOOK v0.5: decoratie en bediening geladen")
+    print("HEERLEN LOOK v0.5.1 ACTIEF: entree, lichten en bediening geladen")
 
 func _material(color: Color, metallic: float = 0.0, shine: float = 0.0) -> StandardMaterial3D:
     var result := StandardMaterial3D.new()
@@ -205,3 +211,67 @@ func _style_controls(node: Node) -> void:
 
     for child in node.get_children():
         _style_controls(child)
+
+
+# Duidelijk zichtbare ingang - alleen decoratie, geen botsingen en geen audio.
+func _make_entrance(world: Node3D) -> void:
+    var gold := _material(Color("ffb85e"), 0.24, 2.1)
+    var teal := _material(Color("45dbe4"), 0.15, 2.4)
+    var dark := _material(Color("232a31"), 0.10)
+    var carpet := _material(Color("4a292b"))
+
+    # Brede loper in het zicht vanaf de startcamera.
+    _box(world, Vector3(2.3, 0.018, 4.8), Vector3(3.25, 0.04, 6.5), carpet)
+    _box(world, Vector3(0.62, 0.043, 4.8), Vector3(0.07, 0.02, 6.5), gold)
+    _box(world, Vector3(3.98, 0.043, 4.8), Vector3(0.07, 0.02, 6.5), gold)
+
+    # Ingangsportaal met warme en blauwe neonstrips.
+    _box(world, Vector3(0.52, 1.56, 2.9), Vector3(0.16, 3.12, 0.16), dark)
+    _box(world, Vector3(4.08, 1.56, 2.9), Vector3(0.16, 3.12, 0.16), dark)
+    _box(world, Vector3(0.52, 1.58, 3.03), Vector3(0.055, 3.00, 0.045), gold)
+    _box(world, Vector3(4.08, 1.58, 3.03), Vector3(0.055, 3.00, 0.045), teal)
+    _box(world, Vector3(2.3, 3.08, 2.9), Vector3(3.68, 0.36, 0.18), dark)
+    _box(world, Vector3(2.3, 3.22, 3.04), Vector3(3.55, 0.055, 0.07), gold)
+    _sign(world, "WELKOM IN HEERLEN", Vector3(2.3, 2.94, 3.06), 34, Color("fff1d2"))
+
+    # Lichtpalen bij de ingang, zichtbaar terwijl je rondloopt.
+    _warm_light(world, Vector3(0.55, 2.52, 3.1), 1.30, 5.4)
+    var cyan_lamp := OmniLight3D.new()
+    cyan_lamp.position = Vector3(4.04, 2.45, 3.05)
+    cyan_lamp.light_color = Color("4fddfa")
+    cyan_lamp.light_energy = 0.95
+    cyan_lamp.omni_range = 5.2
+    cyan_lamp.shadow_enabled = false
+    world.add_child(cyan_lamp)
+
+    # Extra forse, van dichtbij goed zichtbare bartafelpanelen.
+    _box(world, Vector3(-7.35, 0.65, -1.837), Vector3(7.7, 0.14, 0.08), gold)
+    _box(world, Vector3(-7.35, 0.43, -1.785), Vector3(7.7, 0.035, 0.035), teal)
+
+
+# Altijd zichtbaar. Hiermee kun je controleren of deze build echt geladen is.
+func _add_version_banner(hud: CanvasLayer) -> void:
+    if hud.get_node_or_null("LookVersionBanner") != null:
+        return
+    var plaque := PanelContainer.new()
+    plaque.name = "LookVersionBanner"
+    plaque.anchor_left = 0.5
+    plaque.anchor_right = 0.5
+    plaque.offset_left = -225.0
+    plaque.offset_right = 225.0
+    plaque.offset_top = 14.0
+    plaque.offset_bottom = 62.0
+    plaque.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    plaque.add_theme_stylebox_override(
+        "panel", _style_box(Color("171b22"), Color("ffb85e"), 12, 2)
+    )
+
+    var caption := Label.new()
+    caption.text = "TEAMSpeak HEERLEN  |  LOOK v0.5.1"
+    caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    caption.add_theme_font_size_override("font_size", 18)
+    caption.add_theme_color_override("font_color", Color("fff0d6"))
+    plaque.add_child(caption)
+    hud.add_child(plaque)

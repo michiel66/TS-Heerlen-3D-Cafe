@@ -1,0 +1,10 @@
+TS HEERLEN UITERLIJK v0.5.1 - DUIDELIJKE VISUELE FIX
+
+1. Vervang op GitHub uitsluitend scripts/cafe_look.gd door het nieuwe bestand.
+2. Laat scenes/main.tscn zoals het al is (dit verwijst naar cafe_look.gd).
+3. Gebruik de nieuw gestarte (groene) GitHub Actions-run na de commit.
+4. Download de Setup.exe uit die NIEUWSTE run. De bestandsnaam is nog v0.4; dat is de installernaam, niet de LOOK-versie.
+5. Sluit het cafe en de bijbehorende Node-module voor installatie.
+6. Na starten hoort bovenin: TEAMSPEAK HEERLEN | LOOK v0.5.1
+
+Dit pakket verandert niet de Teamspeak-bridge, microfoon, avatars of Windows workflow.
