@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/cafe_look.gd" id="2_look"]
 
 [node name="TeamSpeakHeerlenCafe" type="Node3D"]
 script = ExtResource("1_main")
@@ -29,3 +30,6 @@ theme_override_font_sizes/font_size = 27
 text = "TEAMSpeak HEERLEN 3D CAFE\n\nDe 3D-wereld is niet gestart.\nGebruik de nieuwste v0.2.1 Setup.exe.\nAls dit scherm blijft staan, meld de fout bij GitHub."
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="CafeLookUpgrade" type="Node3D" parent="."]
+script = ExtResource("2_look")

@@ -1,21 +1,19 @@
-TeamSpeak Heerlen 3D Cafe - FIX 0.4.1: online avatars ontbreken
+TeamSpeak Heerlen 3D Café – Uiterlijk v0.5
+==========================================
 
-Vervang deze 3 bestanden op GitHub (behoud de mapstructuur):
-- bridge/main.cjs
-- scripts/online_avatars.gd
-- scripts/main.gd
+Deze update verandert UITSLUITEND de visuele vormgeving.
 
-Het bestaande installer.iss en .github/workflows/windows.yml mogen gewoon blijven staan,
-want de bestandsnamen, PTT, microfoon en codec veranderen niet.
+1. Pak de ZIP uit.
+2. Upload scripts/cafe_look.gd als NIEUW bestand naar jouw GitHub-project.
+3. Vervang scènes/main.tscn (GitHub-pad: scenes/main.tscn) met het bestand uit de ZIP.
+4. Start de bestaande Windows GitHub Actions-build.
+5. Test het nieuwe café.
 
-Wat is opgelost:
-1. Live clientEnter / clientLeave / clientMoved gebeurtenissen worden opgeslagen.
-2. Online gebruikers blijven zichtbaar als TS3 het servercommando clientlist weigert.
-3. De eerste avatars staan nu in het midden, zichtbaar vanuit de ingangspositie.
-4. Statusregel toont hoeveel gebruikers en avatars zijn gevonden.
+LET OP: NIETS aanpassen aan scripts/main.gd, scripts/teamspeak_bridge.gd,
+bridge/main.cjs, scripts/online_avatars.gd, installer.iss of windows.yml.
 
-Let op: een TS3-client ziet alleen gebruikers waar de server toegang voor geeft.
-Geen echte live avatars van verborgen kanalen zonder rechten; geen positie-sync.
+De Setup blijft v0.4 heten. Het betreft een visuele update v0.5 zonder
+wijzigingen aan de audio of TeamSpeak-verbinding.
 
-Na upload controleer GitHub Actions en installeer de nieuwe build.
-Herstart de app na de installatie.
+Alle modellen en materialen worden lokaal procedureel opgebouwd in Godot.
+Voor fotografisch realistische personages/interieurs zijn aparte 3D-assets nodig.
