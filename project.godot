@@ -1,0 +1,59 @@
+; TeamSpeak Heerlen 3D Café – speelbaar prototype
+; Godot 4.7.2 – Windows desktop
+
+config_version=5
+
+[application]
+config/name="TeamSpeak Heerlen 3D Café"
+run/main_scene="res://scenes/main.tscn"
+config/description="Virtueel 3D-koffiehuis voor de TeamSpeak Heerlen-community"
+config/icon="res://assets/icon.png"
+
+[display]
+window/size/viewport_width=1536
+window/size/viewport_height=864
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+
+[physics]
+3d/default_gravity=19.6
+
+[input]
+move_forward={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":87), Object(InputEventKey,"physical_keycode":4194320)]
+}
+move_backward={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":83), Object(InputEventKey,"physical_keycode":4194322)]
+}
+move_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":65), Object(InputEventKey,"physical_keycode":4194319)]
+}
+move_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":68), Object(InputEventKey,"physical_keycode":4194321)]
+}
+interact={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":69)]
+}
+emote={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":70)]
+}
+reset_position={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":82)]
+}
+chat={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":4194333)]
+}

@@ -1,0 +1,17 @@
+TEAMSPEAK HEERLEN 3D CAFE - VERSIE 0.1
+====================================
+
+1. Pak deze ZIP uit.
+2. Open 'project.godot' met Godot 4.7.2.
+3. Druk op F5 om door het café te lopen.
+4. Upload alle bestanden en mappen naar een NIEUWE GitHub-repository.
+5. Gebruik in GitHub: Actions -> Build Windows EXE -> Run workflow.
+6. Download de gebouwde Windows-EXE onder Artifacts.
+
+Dit is het eerste SPEELBARE BRONCODEPROTOTYPE en NIET de
+fotorealistische eindversie van de afbeelding.
+
+TeamSpeak 3 opent extern via de TeamSpeak-knop.
+Multiplayer / live TeamSpeak-spraak in de app werken NOG NIET.
+
+Lees README.md voor alle details.
