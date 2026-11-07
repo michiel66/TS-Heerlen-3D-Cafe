@@ -16,27 +16,49 @@ jobs:
     runs-on: windows-latest
 
     steps:
+
+      # ========================================
+      # 1. PROJECT OPHALEN
+      # ========================================
+
       - name: Project ophalen
         uses: actions/checkout@v4
+
+      # ========================================
+      # 2. GODOT 4.7.2 INSTALLEREN
+      # ========================================
 
       - name: Download Godot 4.7.2 officieel
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
           $base = 'https://github.com/godotengine/godot/releases/download/4.7.2-stable'
           $zip = Join-Path $env:RUNNER_TEMP 'godot-editor.zip'
           $folder = Join-Path $env:RUNNER_TEMP 'godot-editor'
 
-          Invoke-WebRequest -Uri "$base/Godot_v4.7.2-stable_win64.exe.zip" -OutFile $zip
-          Expand-Archive -LiteralPath $zip -DestinationPath $folder -Force
+          Invoke-WebRequest `
+            -Uri "$base/Godot_v4.7.2-stable_win64.exe.zip" `
+            -OutFile $zip
 
-          $godot = Get-ChildItem -Path $folder -Filter 'Godot_v4.7.2-stable_win64_console.exe' -Recurse -File | Select-Object -First 1
+          Expand-Archive `
+            -LiteralPath $zip `
+            -DestinationPath $folder `
+            -Force
+
+          $godot = Get-ChildItem `
+            -Path $folder `
+            -Filter 'Godot_v4.7.2-stable_win64_console.exe' `
+            -Recurse -File |
+            Select-Object -First 1
 
           if (-not $godot) {
-            throw 'Godot console.exe ontbreekt na uitpakken.'
+            throw 'Godot console.exe ontbreekt.'
           }
 
-          "GODOT_BIN=$($godot.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "GODOT_BIN=$($godot.FullName)" |
+            Out-File -FilePath $env:GITHUB_ENV `
+            -Append -Encoding utf8
 
           & $godot.FullName --headless --version
 
@@ -44,119 +66,256 @@ jobs:
             throw 'Godot start niet correct.'
           }
 
-      - name: Installeer exporttemplates voor Windows
+      # ========================================
+      # 3. WINDOWS EXPORT TEMPLATES
+      # ========================================
+
+      - name: Installeer Godot exporttemplates
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
           $base = 'https://github.com/godotengine/godot/releases/download/4.7.2-stable'
-          $tpz = Join-Path $env:RUNNER_TEMP 'godot-templates.tpz'
-          $zip = Join-Path $env:RUNNER_TEMP 'godot-templates.zip'
-          $unpacked = Join-Path $env:RUNNER_TEMP 'godot-templates'
 
-          Invoke-WebRequest -Uri "$base/Godot_v4.7.2-stable_export_templates.tpz" -OutFile $tpz
-          Copy-Item -LiteralPath $tpz -Destination $zip
-          Expand-Archive -LiteralPath $zip -DestinationPath $unpacked -Force
+          $tpz = Join-Path $env:RUNNER_TEMP 'templates.tpz'
+          $zip = Join-Path $env:RUNNER_TEMP 'templates.zip'
+          $folder = Join-Path $env:RUNNER_TEMP 'templates'
 
-          $source = Join-Path $unpacked 'templates'
-          $target = Join-Path $env:APPDATA 'Godot\export_templates\4.7.2.stable'
+          Invoke-WebRequest `
+            -Uri "$base/Godot_v4.7.2-stable_export_templates.tpz" `
+            -OutFile $tpz
+
+          Copy-Item $tpz $zip
+
+          Expand-Archive `
+            -LiteralPath $zip `
+            -DestinationPath $folder `
+            -Force
+
+          $source = Join-Path $folder 'templates'
+
+          $target = Join-Path `
+            $env:APPDATA `
+            'Godot\export_templates\4.7.2.stable'
 
           if (-not (Test-Path $source)) {
-            throw 'Map templates ontbreekt in TPZ.'
+            throw 'Exporttemplates ontbreken.'
           }
 
-          New-Item -ItemType Directory -Path $target -Force | Out-Null
-          Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+          New-Item -ItemType Directory `
+            -Path $target -Force | Out-Null
+
+          Copy-Item `
+            -Path (Join-Path $source '*') `
+            -Destination $target `
+            -Recurse -Force
 
           if (-not (Test-Path (Join-Path $target 'windows_release_x86_64.exe'))) {
             throw 'Windows x64 exporttemplate ontbreekt.'
           }
 
-          Write-Host 'Godot exporttemplates geinstalleerd.'
+          Write-Host 'Godot exporttemplates gereed.'
 
-      - name: Installeer Node.js voor bridge build
+      # ========================================
+      # 4. NODE.JS 22 INSTALLEREN
+      # ========================================
+
+      - name: Installeer Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Installeer TS3-protocol en Opus-afhankelijkheden
+      - name: Controleer Node en npm
         shell: pwsh
         run: |
-          npm install --prefix bridge --omit=dev --no-audit --no-fund
+          node --version
+          npm.cmd --version
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Bridge npm installatie mislukt'
+            throw 'Node.js of npm werkt niet.'
           }
 
-          npm test --prefix bridge
+      # ========================================
+      # 5. TEAMSPEAK BRIDGE CONTROLEREN
+      # ========================================
 
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Bridge tests mislukt'
-          }
-
-      - name: Importeer 3D-cafe project
+      - name: Controleer TeamSpeak bridge bestanden
         shell: pwsh
         run: |
-          & $env:GODOT_BIN --headless --editor --import --path . --quit
-
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Godot projectimport mislukt; controleer GDScript fouten in het log.'
+          if (-not (Test-Path 'bridge/package.json')) {
+            throw 'bridge/package.json ontbreekt.'
           }
 
-      - name: Test of 3D-cafe en menu echt starten
+          if (-not (Test-Path 'bridge/main.cjs')) {
+            throw 'bridge/main.cjs ontbreekt.'
+          }
+
+          if (-not (Test-Path 'bridge/protocol.cjs')) {
+            throw 'bridge/protocol.cjs ontbreekt.'
+          }
+
+          Write-Host 'TeamSpeak bridge gevonden.'
+
+      # ========================================
+      # 6. NPM FOUT HERSTELD
+      # ========================================
+
+      - name: Installeer TeamSpeak en Opus
         shell: pwsh
+        working-directory: ./bridge
         run: |
-          & $env:GODOT_BIN --headless --path . --script 'res://tests/smoke_test.gd' --log-file 'startup-check.log'
+          $ErrorActionPreference = 'Stop'
+
+          Write-Host "Werkmap: $(Get-Location)"
+
+          if (-not (Test-Path 'package.json')) {
+            throw 'package.json ontbreekt in bridge-map.'
+          }
+
+          npm.cmd install --omit=dev --no-audit --no-fund
 
           if ($LASTEXITCODE -ne 0) {
+            throw 'TeamSpeak bridge installatie mislukt.'
+          }
+
+          Write-Host 'TeamSpeak en Opus geinstalleerd.'
+
+      # ========================================
+      # 7. BRIDGE TESTEN
+      # ========================================
+
+      - name: Test TeamSpeak bridge
+        shell: pwsh
+        working-directory: ./bridge
+        run: |
+          npm.cmd test
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'TeamSpeak bridge tests mislukt.'
+          }
+
+          Write-Host 'Bridge tests geslaagd.'
+
+      # ========================================
+      # 8. GODOT PROJECT IMPORTEREN
+      # ========================================
+
+      - name: Importeer 3D Cafe project
+        shell: pwsh
+        run: |
+          & $env:GODOT_BIN `
+            --headless `
+            --editor `
+            --import `
+            --path . `
+            --quit
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Godot projectimport mislukt.'
+          }
+
+      # ========================================
+      # 9. 3D CAFE OPSTARTTEST
+      # ========================================
+
+      - name: Test of 3D Cafe start
+        shell: pwsh
+        run: |
+          & $env:GODOT_BIN `
+            --headless `
+            --path . `
+            --script 'res://tests/smoke_test.gd' `
+            --log-file 'startup-check.log'
+
+          if ($LASTEXITCODE -ne 0) {
+
             if (Test-Path 'startup-check.log') {
               Get-Content 'startup-check.log' -Tail 100
             }
 
-            throw 'De cafe-starttest is mislukt. Setup.exe wordt NIET gemaakt.'
+            throw '3D Cafe opstarttest mislukt.'
           }
 
-      - name: Bouw Windows app
+          Write-Host '3D Cafe opstarttest geslaagd.'
+
+      # ========================================
+      # 10. WINDOWS APP BOUWEN
+      # ========================================
+
+      - name: Bouw Windows 3D Cafe
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          New-Item -ItemType Directory `
+            -Path dist -Force | Out-Null
 
-          & $env:GODOT_BIN --headless --path . --export-release 'Windows Desktop' 'dist/TS-Heerlen-3D-Cafe.exe'
+          & $env:GODOT_BIN `
+            --headless `
+            --path . `
+            --export-release 'Windows Desktop' `
+            'dist/TS-Heerlen-3D-Cafe.exe'
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Godot export mislukt; controleer het log.'
+            throw 'Godot export mislukt.'
           }
 
           if (-not (Test-Path 'dist/TS-Heerlen-3D-Cafe.exe')) {
-            throw 'Windows exe niet gevonden.'
+            throw 'Windows EXE ontbreekt.'
           }
 
-          Get-Item 'dist/TS-Heerlen-3D-Cafe.exe' | Select-Object Name, Length
+          Write-Host 'Windows cafe succesvol gebouwd.'
 
-      - name: Verpak lokale TeamSpeak-module in app
+      # ========================================
+      # 11. TEAMSPEAK MODULE MEEVERPAKKEN
+      # ========================================
+
+      - name: Verpak TeamSpeak module
         shell: pwsh
         run: |
           $runtime = 'dist/bridge-runtime'
 
-          New-Item -ItemType Directory -Path $runtime -Force | Out-Null
+          New-Item -ItemType Directory `
+            -Path $runtime -Force | Out-Null
 
           $node = (Get-Command node.exe).Source
 
-          Copy-Item -LiteralPath $node -Destination "$runtime/node.exe"
-          Copy-Item -LiteralPath 'bridge/main.cjs' -Destination "$runtime/main.cjs"
-          Copy-Item -LiteralPath 'bridge/protocol.cjs' -Destination "$runtime/protocol.cjs"
-          Copy-Item -LiteralPath 'bridge/package.json' -Destination "$runtime/package.json"
+          Copy-Item `
+            -LiteralPath $node `
+            -Destination "$runtime/node.exe"
 
-          Copy-Item -Path 'bridge/node_modules' -Destination "$runtime/node_modules" -Recurse
+          Copy-Item `
+            -LiteralPath 'bridge/main.cjs' `
+            -Destination "$runtime/main.cjs"
 
-          if (!(Test-Path "$runtime/node_modules/opusscript")) {
-            throw 'Opus codec ontbreekt'
+          Copy-Item `
+            -LiteralPath 'bridge/protocol.cjs' `
+            -Destination "$runtime/protocol.cjs"
+
+          Copy-Item `
+            -LiteralPath 'bridge/package.json' `
+            -Destination "$runtime/package.json"
+
+          Copy-Item `
+            -Path 'bridge/node_modules' `
+            -Destination "$runtime/node_modules" `
+            -Recurse
+
+          if (-not (Test-Path "$runtime/node_modules/opusscript")) {
+            throw 'Opus codec ontbreekt.'
           }
 
-          if (!(Test-Path "$runtime/node_modules/@honeybbq/teamspeak-client")) {
-            throw 'TeamSpeak-client ontbreekt'
+          if (-not (Test-Path "$runtime/node_modules/@honeybbq/teamspeak-client")) {
+            throw 'TeamSpeak protocol ontbreekt.'
           }
 
-          Write-Host 'Lokale TS3-bridge en Node runtime verpakt.'
+          if (-not (Test-Path "$runtime/node_modules/ws")) {
+            throw 'WebSocket module ontbreekt.'
+          }
+
+          Write-Host 'TeamSpeak module compleet verpakt.'
+
+      # ========================================
+      # 12. INNO SETUP INSTALLEREN
+      # ========================================
 
       - name: Installeer Inno Setup
         shell: pwsh
@@ -166,27 +325,34 @@ jobs:
             'C:\Program Files\Inno Setup 6\ISCC.exe'
           )
 
-          $compiler = $paths | Where-Object {
-            Test-Path $_
-          } | Select-Object -First 1
+          $compiler = $paths |
+            Where-Object { Test-Path $_ } |
+            Select-Object -First 1
 
           if (-not $compiler) {
+
             choco install innosetup -y --no-progress
 
             if ($LASTEXITCODE -ne 0) {
               throw 'Inno Setup installatie mislukt.'
             }
 
-            $compiler = $paths | Where-Object {
-              Test-Path $_
-            } | Select-Object -First 1
+            $compiler = $paths |
+              Where-Object { Test-Path $_ } |
+              Select-Object -First 1
           }
 
           if (-not $compiler) {
-            throw 'ISCC.exe niet gevonden.'
+            throw 'Inno Setup compiler niet gevonden.'
           }
 
-          "ISCC_PATH=$compiler" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ISCC_PATH=$compiler" |
+            Out-File -FilePath $env:GITHUB_ENV `
+            -Append -Encoding utf8
+
+      # ========================================
+      # 13. WINDOWS SETUP.EXE MAKEN
+      # ========================================
 
       - name: Maak TeamSpeak Heerlen Setup.exe
         shell: pwsh
@@ -194,7 +360,7 @@ jobs:
           & $env:ISCC_PATH 'installer.iss'
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Inno Setup compile mislukt.'
+            throw 'Windows installer bouwen mislukt.'
           }
 
           $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.3.exe'
@@ -203,9 +369,16 @@ jobs:
             throw 'Setup.exe ontbreekt.'
           }
 
-          Get-Item $setup | Select-Object Name, Length
+          Get-Item $setup |
+            Select-Object Name, Length
 
-      - name: Download Windows-installer
+          Write-Host 'TeamSpeak Heerlen Setup.exe gereed.'
+
+      # ========================================
+      # 14. INSTALLER DOWNLOADBAAR MAKEN
+      # ========================================
+
+      - name: Upload Windows Setup
         uses: actions/upload-artifact@v4
         with:
           name: TS-Heerlen-3D-Cafe-Setup-v0.3
@@ -213,7 +386,11 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publiceer bij versie-tag
+      # ========================================
+      # 15. GITHUB RELEASE PUBLICEREN
+      # ========================================
+
+      - name: Publiceer GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
