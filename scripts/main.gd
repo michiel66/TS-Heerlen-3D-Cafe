@@ -1,5 +1,5 @@
 extends Node3D
-## TeamSpeak Heerlen 3D Café – Windows prototype v0.1
+## TeamSpeak Heerlen 3D Café – Windows prototype v0.2.1 — herstel leeg scherm
 ## 3D werkt lokaal. TeamSpeak wordt extern geopend met ts3server://.
 
 const WORLD_SCRIPT = preload("res://scripts/world.gd")
@@ -21,22 +21,31 @@ func _ready() -> void:
     if profile.load("user://cafe_profiel.cfg") == OK:
         nick = str(profile.get_value("profile", "nickname", nick))
     var cafe = WORLD_SCRIPT.new()
+    cafe.name = "CafeWorld"
     add_child(cafe)
     player = AVATAR_SCRIPT.new()
     player.display_name = nick
+    player.name = "LocalAvatar"
     add_child(player)
     player.global_position = Vector3(2.3, 0.15, 5.8)
     camera = Camera3D.new()
+    camera.name = "MainCamera"
     camera.current = true
     camera.fov = 65.0
     add_child(camera)
     _update_camera(1.0)
     hud = HUD_SCRIPT.new()
+    hud.name = "CafeHUD"
     hud.avatar = player
     hud.nickname = nick
     add_child(hud)
     hud.action_requested.connect(_ui_action)
     hud.nickname_changed.connect(_update_nickname)
+    # Verberg het fout-/startscherm pas nadat camera, wereld en HUD zijn aangemaakt.
+    var boot: CanvasLayer = get_node_or_null("BootScreen") as CanvasLayer
+    if boot != null:
+        boot.visible = false
+    print("TS HEERLEN START OK: 3D wereld, camera, speler, HUD aanwezig")
 
 func _process(delta: float) -> void:
     if is_instance_valid(player):
@@ -44,7 +53,7 @@ func _process(delta: float) -> void:
         _update_camera(delta)
 
 func _update_camera(delta: float) -> void:
-    var target := player.global_position + Vector3(0.0, 1.36, 0.0)
+    var target: Vector3 = player.global_position + Vector3(0.0, 1.36, 0.0)
     var horizontal := Vector3(sin(yaw), 0.0, cos(yaw)) * zoom
     var desired := target + horizontal + Vector3(0.0, 1.48 + pitch * 3.5, 0.0)
     camera.global_position = camera.global_position.lerp(desired, clampf(delta * 8.0, 0.0, 1.0))
@@ -83,7 +92,7 @@ func _interact() -> void:
     var best := 1.65
     for node in get_tree().get_nodes_in_group("cafe_seats"):
         var seat: Node3D = node
-        var d := player.global_position.distance_to(seat.global_position)
+        var d: float = player.global_position.distance_to(seat.global_position)
         if d < best:
             best = d
             closest = seat
