@@ -1,501 +1,255 @@
-
 'use strict';
-
-// TeamSpeak Heerlen 3D Cafe v0.4
-// Directe TeamSpeak-verbinding zonder aparte plugin.
-
+// De websocket luistert alleen op localhost en accepteert uitsluitend een token dat
+// het 3D programma bij het starten genereert. Geen losse server en geen TS-plugin.
 const fs = require('node:fs');
 const path = require('node:path');
 const { WebSocketServer, WebSocket } = require('ws');
-
-const {
-  decodeJSON,
-  nickname,
-  channel,
-  fromClient,
-  pcmFromBase64
-} = require('./protocol.cjs');
-
+const { decodeJSON, nickname, channel, fromClient, pcmFromBase64 } = require('./protocol.cjs');
 const PORT = 39453;
 const args = process.argv.slice(2);
 const token = args[0] || '';
-
-const userDir = args[1] || path.join(
-  process.env.APPDATA || process.cwd(),
-  'TS-Heerlen-Cafe'
-);
-
+const userDir = args[1] || path.join(process.env.APPDATA || process.cwd(), 'TS-Heerlen-Cafe');
 if (!/^[0-9a-f]{48}$/.test(token)) {
-  console.error('Bridge vereist een geldig geheim token.');
+  console.error('Bridge vereist een geheim 48-tekens token van de cafe-app.');
   process.exit(2);
 }
-
 fs.mkdirSync(userDir, { recursive: true });
-
-let socket = null;
-let authed = false;
-let sdk = null;
-let client = null;
-let opusTx = null;
-let connected = false;
-let transmitting = false;
-let busyConnect = false;
-let listTimer = null;
-let activeSpeaker = null;
-let activeUntil = 0;
-
-const decoders = new Map();
-let lastRoster = [];
+let socket = null, authed = false, sdk = null, client = null, opusTx = null;
+let connected = false, transmitting = false, busyConnect = false;
+let listTimer = null, activeSpeaker = null, activeUntil = 0;
+let decoders = new Map(), lastRoster = [];
 
 function out(type, fields = {}) {
-  if (
-    authed &&
-    socket?.readyState === WebSocket.OPEN
-  ) {
-    socket.send(JSON.stringify({
-      type,
-      ...fields
-    }));
-  }
+  if (authed && socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({type,...fields}));
 }
-
-function status(message) {
-  out('status', { connected, message });
-}
-
-function failure(err) {
-  out('error', {
-    message: String(
-      err?.message || err
-    ).slice(0, 240)
-  });
-}
-
-function identityFile() {
-  return path.join(userDir, 'teamspeak-identity.txt');
-}
-
+function status(message) { out('status',{connected,message}); }
+function failure(err) { out('error',{message:String(err?.message || err).slice(0,240)}); }
+function identityFile() { return path.join(userDir,'teamspeak-identity.txt'); }
 function identity() {
-  try {
-    return sdk.identityFromString(
-      fs.readFileSync(identityFile(), 'utf8').trim()
-    );
-  } catch (err) {
-    if (err?.code && err.code !== 'ENOENT') {
-      throw err;
-    }
-
+  try {return sdk.identityFromString(fs.readFileSync(identityFile(),'utf8').trim());}
+  catch (err) {
+    if(err?.code && err.code !== 'ENOENT') throw err;
     const value = sdk.generateIdentity(8);
-
-    fs.writeFileSync(
-      identityFile(),
-      value.toString(),
-      { mode: 0o600 }
-    );
-
+    fs.writeFileSync(identityFile(), value.toString(), {mode:0o600});
     return value;
   }
 }
-
 function myChannel() {
-  try {
-    return String(client?.channelID?.() ?? '');
-  } catch {
-    return '';
-  }
+  try {return String(client?.channelID?.() ?? '');} catch {return '';}
+}
+// TeamSpeak geeft de bestaande kanaalbezoekers ook via clientEnter events.
+// Deze blijven zichtbaar als de server het clientlist-commando blokkeert.
+const eventRoster = new Map();
+let queryRoster = new Map();
+let connectedNickname = 'Bezoeker';
+let rosterBusy = false;
+let warnedRosterPermissions = false;
+
+function validVisitor(value) {
+  if (!value || typeof value !== 'object') return null;
+  const entry = fromClient(value);
+  if (!/^\d+$/.test(entry.id) || Number(entry.id) < 1 || entry.type !== 0) return null;
+  const name = String(entry.name || '').trim();
+  if (!name) return null;
+  return { ...entry, name };
 }
 
-function ownClientId() {
-  try {
-    return String(client?.clientID?.() ?? '');
-  } catch {
-    return '';
+function publishRoster() {
+  if (!connected) return;
+  const usersById = new Map(queryRoster);
+  // Recent enter/move/leave notificaties hebben voorrang boven een query-resultaat.
+  for (const [id, value] of eventRoster) usersById.set(id, value);
+  const me = String(client?.clientID?.() ?? '');
+  if (/^\d+$/.test(me) && Number(me) > 0 && !usersById.has(me)) {
+    usersById.set(me, { id: me, name: connectedNickname, channel: myChannel(), type: 0 });
   }
+  const users = [...usersById.values()]
+    .sort((a, b) => Number(a.id) - Number(b.id))
+    .slice(0, 500);
+  lastRoster = users;
+  out('roster', {
+    users,
+    ownChannel: myChannel(),
+    ownClientId: me,
+    source: queryRoster.size ? 'clientlist+events' : 'server-events',
+  });
 }
 
-// Live gebruikerslijst inclusief eigen client-ID.
+function rememberClientEnter(info) {
+  const entry = validVisitor(info);
+  if (!entry) return;
+  eventRoster.set(entry.id, entry);
+  publishRoster();
+}
+
+function rememberClientMoved(event) {
+  const id = String(event?.id ?? '');
+  const existing = eventRoster.get(id) || queryRoster.get(id);
+  if (existing) {
+    eventRoster.set(id, {
+      ...existing,
+      channel: String(event.targetChannelID ?? existing.channel),
+    });
+  }
+  publishRoster();
+}
+
+function rememberClientLeave(event) {
+  const id = String(event?.id ?? '');
+  eventRoster.delete(id);
+  queryRoster.delete(id);
+  publishRoster();
+}
+
 async function refreshRoster() {
-  if (!connected || !client || !sdk) {
-    return;
-  }
-
+  if (!connected || !client || !sdk || rosterBusy) return;
+  rosterBusy = true;
   try {
-    const clients = typeof sdk.listClients === 'function'
-      ? await sdk.listClients(client)
-      : typeof client.listClients === 'function'
-        ? await client.listClients()
-        : [];
-
-    if (!Array.isArray(clients)) {
-      throw new Error(
-        'Geen geldige TeamSpeak-clientlijst ontvangen'
-      );
+    if (typeof sdk.listClients !== 'function') {
+      throw Error('clientlist niet ondersteund; server-events worden gebruikt');
     }
-
-    lastRoster = clients
-      .map(fromClient)
-      .filter(user => user.type === 0 && user.id);
-
-    out('roster', {
-      users: lastRoster.slice(0, 500),
-      ownChannel: myChannel(),
-      ownClientId: ownClientId()
-    });
-
+    const clients = await sdk.listClients(client);
+    if (!Array.isArray(clients)) throw Error('Geen geldige clientlijst ontvangen');
+    const next = new Map();
+    for (const value of clients) {
+      const entry = validVisitor(value);
+      if (entry) next.set(entry.id, entry);
+    }
+    queryRoster = next;
+    warnedRosterPermissions = false;
   } catch (err) {
-    out('error', {
-      message: 'Gebruikerslijst: ' +
-        String(err.message).slice(0, 170)
-    });
+    // Geen lege lijst terugsturen: de events blijven gewoon bruikbaar.
+    if (!warnedRosterPermissions) {
+      warnedRosterPermissions = true;
+      out('error', {
+        message: 'Gebruikerslijst via clientlist niet beschikbaar (' +
+          String(err.message).slice(0, 90) + '); zichtbare bezoekers via server-events.',
+      });
+    }
+  } finally {
+    rosterBusy = false;
+    publishRoster();
   }
 }
-
-// Ontvangen Opus-spraak naar het 3D-cafe.
 function processVoice(packet) {
-  if (
-    !connected ||
-    !packet ||
-    ![4, 5].includes(packet.codec) ||
-    !packet.data ||
-    !packet.data.length
-  ) {
-    return;
-  }
-
+  if(!connected || !packet || ![4,5].includes(packet.codec) || !packet.data || !packet.data.length) return;
   const id = Number(packet.clientId ?? -1);
-
-  if (!Number.isInteger(id) || id < 0) {
-    return;
-  }
-
+  if(!Number.isInteger(id) || id < 0) return;
   const now = Date.now();
-
-  if (
-    activeSpeaker !== id &&
-    activeUntil > now
-  ) {
-    return;
-  }
-
-  activeSpeaker = id;
-  activeUntil = now + 140;
-
+  if(activeSpeaker !== id && activeUntil > now) return; // geen twee streams door elkaar
+  activeSpeaker = id; activeUntil = now + 140;
   let decoder = decoders.get(id);
-
   try {
-    if (!decoder) {
+    if(!decoder) {
       const OpusScript = require('opusscript');
-
-      decoder = new OpusScript(
-        48000,
-        packet.codec === 5 ? 2 : 1,
-        OpusScript.Application.VOIP
-      );
-
-      decoders.set(id, decoder);
+      decoder = new OpusScript(48000, packet.codec === 5 ? 2 : 1, OpusScript.Application.VOIP);
+      decoders.set(id,decoder);
     }
-
-    const decoded = decoder.decode(
-      Buffer.isBuffer(packet.data)
-        ? packet.data
-        : Buffer.from(packet.data)
-    );
-
+    const decoded = decoder.decode(Buffer.isBuffer(packet.data) ? packet.data : Buffer.from(packet.data));
     const channels = packet.codec === 5 ? 2 : 1;
     let mono = decoded;
-
-    if (channels === 2) {
-      mono = Buffer.alloc(
-        Math.floor(decoded.length / 4) * 2
-      );
-
-      for (let i = 0; i < mono.length / 2; i++) {
-        mono.writeInt16LE(
-          Math.round(
-            (
-              decoded.readInt16LE(i * 4) +
-              decoded.readInt16LE(i * 4 + 2)
-            ) / 2
-          ),
-          i * 2
-        );
+    if(channels === 2) {
+      mono = Buffer.alloc(Math.floor(decoded.length / 4) * 2);
+      for(let i=0;i<mono.length/2;i++) {
+        mono.writeInt16LE(Math.round((decoded.readInt16LE(i*4)+decoded.readInt16LE(i*4+2))/2),i*2);
       }
     }
-
-    if (mono.length && mono.length <= 5760) {
-      out('audio', {
-        clientId: id,
-        pcm: mono.toString('base64')
-      });
-
-      out('talking', {
-        clientId: id
-      });
+    if(mono.length && mono.length <= 5760) {
+      out('audio',{clientId:id,pcm:mono.toString('base64')});
+      out('talking',{clientId:id});
     }
-
-  } catch (err) {
-    out('error', {
-      message: 'Opus RX: ' +
-        String(err.message).slice(0, 150)
-    });
-  }
+  } catch(err) {out('error',{message:'Opus RX: '+String(err.message).slice(0,150)});}
 }
-
-// Direct verbinden met Heerlen.
 async function connectTS(msg) {
-  if (busyConnect || connected) {
-    return;
-  }
-
+  if(busyConnect || connected) return;
   busyConnect = true;
-
+  eventRoster.clear();
+  queryRoster.clear();
+  lastRoster = [];
+  warnedRosterPermissions = false;
   status('Verbinden met Heerlen.MIJNTS3.NL…');
-
   try {
     sdk = await import('@honeybbq/teamspeak-client');
-
     const OpusScript = require('opusscript');
-
-    opusTx = new OpusScript(
-      48000,
-      1,
-      OpusScript.Application.VOIP
-    );
-
+    opusTx = new OpusScript(48000,1,OpusScript.Application.VOIP);
     opusTx.setBitrate(24000);
-
     const nick = nickname(msg.nickname);
+    connectedNickname = nick;
     const room = channel(msg.channel);
-
-    client = new sdk.Client(
-      identity(),
-      'Heerlen.MIJNTS3.NL',
-      nick,
-      {
-        defaultChannel: room,
-        logger: {
-          debug() {},
-          info() {},
-          warn() {},
-          error() {}
-        }
-      }
-    );
-
-    client.on('voiceData', processVoice);
-
-    client.on('clientEnter', () => {
-      void refreshRoster();
+    client = new sdk.Client(identity(), 'Heerlen.MIJNTS3.NL', nick, {
+      defaultChannel:room,
+      logger:{debug(){},info(){},warn(){},error(){}}
     });
-
-    client.on('clientMoved', () => {
-      void refreshRoster();
+    client.on('voiceData',processVoice);
+    client.on('clientEnter', rememberClientEnter);
+    client.on('clientMoved', rememberClientMoved);
+    client.on('clientLeave', rememberClientLeave);
+    client.on('disconnected',(err)=>{
+      connected=false;transmitting=false;
+      status('TeamSpeak verbinding verbroken'+(err?.message ? ': '+err.message : ''));
+      out('roster',{users:[],ownChannel:'',ownClientId:''});
     });
-
-    client.on('clientLeave', () => {
-      void refreshRoster();
-    });
-
-    client.on('disconnected', err => {
-      connected = false;
-      transmitting = false;
-
-      status(
-        'TeamSpeak verbinding verbroken' +
-        (err?.message ? ': ' + err.message : '')
-      );
-
-      out('roster', {
-        users: [],
-        ownChannel: '',
-        ownClientId: ''
-      });
-    });
-
     await client.connect();
-    await client.waitConnected(
-      AbortSignal.timeout(18000)
-    );
-
+    await client.waitConnected(AbortSignal.timeout(18000));
     connected = true;
-
-    status(
-      'Verbonden als ' + nick +
-      ' · kanaal ' + (room || 'standaard')
-    );
-
+    publishRoster();
+    status('Verbonden als '+nick+' · kanaal '+(room || 'standaard'));
     await refreshRoster();
-
     clearInterval(listTimer);
-
-    listTimer = setInterval(() => {
-      void refreshRoster();
-    }, 5000);
-
-  } catch (err) {
-    failure(err);
-    await disconnectTS();
-  } finally {
-    busyConnect = false;
-  }
+    listTimer = setInterval(()=>{void refreshRoster();},20000);
+  } catch(err) {failure(err); await disconnectTS();}
+  finally {busyConnect = false;}
 }
-
 async function disconnectTS() {
   connected = false;
   transmitting = false;
-
   clearInterval(listTimer);
   listTimer = null;
-
-  try {
-    await client?.disconnect?.();
-  } catch {}
-
+  try {await client?.disconnect?.();} catch {}
   client = null;
-
-  try {
-    opusTx?.delete?.();
-  } catch {}
-
-  opusTx = null;
-
-  for (const decoder of decoders.values()) {
-    try {
-      decoder.delete();
-    } catch {}
-  }
-
-  decoders.clear();
-  activeSpeaker = null;
-  activeUntil = 0;
-
+  try {opusTx?.delete?.();}catch {}
+  opusTx=null;
+  for(const decoder of decoders.values()){try{decoder.delete();}catch{}}
+  decoders.clear();activeSpeaker=null;activeUntil=0;
   status('Niet verbonden');
-
-  out('roster', {
-    users: [],
-    ownChannel: '',
-    ownClientId: ''
-  });
+  out('roster',{users:[],ownChannel:'',ownClientId:''});
 }
-
 function sendPCM(msg) {
-  if (
-    !connected ||
-    !transmitting ||
-    !opusTx ||
-    !client
-  ) {
-    return;
-  }
-
+  if(!connected || !transmitting || !opusTx || !client) return;
   try {
     const raw = pcmFromBase64(msg.pcm);
-    const packet = opusTx.encode(raw, 960);
-
-    client.sendVoice(packet, 4);
-
-  } catch (err) {
-    failure(err);
-  }
+    const packet = opusTx.encode(raw,960);
+    client.sendVoice(packet,4);
+  } catch(err) {failure(err);}
 }
-
-// Lokale beveiligde WebSocket-server.
-const server = new WebSocketServer({
-  host: '127.0.0.1',
-  port: PORT,
-  maxPayload: 12000,
-  clientTracking: true
-});
-
-server.on('connection', ws => {
-  if (
-    socket &&
-    socket.readyState === WebSocket.OPEN
-  ) {
-    ws.close(1008, 'Bezet');
-    return;
-  }
-
-  socket = ws;
-  authed = false;
-
-  const deadline = setTimeout(() => {
-    if (!authed) {
-      ws.close(1008, 'Authenticatie vereist');
-    }
-  }, 4000);
-
-  ws.on('message', async data => {
+const server = new WebSocketServer({host:'127.0.0.1',port:PORT,maxPayload:12000,clientTracking:true});
+server.on('connection',(ws)=>{
+  if(socket && socket.readyState === WebSocket.OPEN){ws.close(1008,'Bezet');return;}
+  socket=ws;authed=false;
+  const deadline=setTimeout(()=>{if(!authed)ws.close(1008,'Authenticatie vereist');},4000);
+  ws.on('message',async(data)=>{
     try {
-      const msg = decodeJSON(data);
-
-      if (!authed) {
-        if (
-          msg.type !== 'hello' ||
-          msg.token !== token
-        ) {
-          ws.close(1008, 'Ongeldig token');
-          return;
-        }
-
-        authed = true;
-        clearTimeout(deadline);
-        status('Lokale spraakmodule gereed');
-        return;
+      const msg=decodeJSON(data);
+      if(!authed){
+        if(msg.type!=='hello'||msg.token!==token){ws.close(1008,'Ongeldig token');return;}
+        authed=true;clearTimeout(deadline);status('Lokale spraakmodule gereed');return;
       }
-
-      if (msg.type === 'connect') {
-        await connectTS(msg);
-
-      } else if (msg.type === 'disconnect') {
-        await disconnectTS();
-
-      } else if (msg.type === 'ptt') {
+      if(msg.type==='connect') await connectTS(msg);
+      else if(msg.type==='disconnect') await disconnectTS();
+      else if(msg.type==='ptt') {
         const next = Boolean(msg.active) && connected;
-
-        if (transmitting && !next && client) {
-          try {
-            client.sendVoice(
-              Buffer.alloc(0), 4
-            );
-          } catch {}
+        if(transmitting && !next && client) {
+          try { client.sendVoice(Buffer.alloc(0), 4); } catch {}
         }
-
         transmitting = next;
-
-      } else if (msg.type === 'pcm') {
-        sendPCM(msg);
-
-      } else if (msg.type === 'roster') {
-        await refreshRoster();
       }
-
-    } catch (err) {
-      failure(err);
-    }
+      else if(msg.type==='pcm') sendPCM(msg);
+      else if(msg.type==='roster') await refreshRoster();
+    } catch(err){failure(err);}
   });
-
-  ws.on('close', () => {
-    clearTimeout(deadline);
-    authed = false;
-    socket = null;
-    void disconnectTS();
-  });
+  ws.on('close',()=>{clearTimeout(deadline);authed=false;socket=null;void disconnectTS();});
 });
-
-server.on('error', err => {
-  console.error('Lokale bridge:', err.message);
-  process.exit(1);
-});
-
-process.on('SIGTERM', () => {
-  void disconnectTS().finally(() => process.exit(0));
-});
-
-process.on('SIGINT', () => {
-  void disconnectTS().finally(() => process.exit(0));
-});
-
-console.log(
-  'TeamSpeak Heerlen lokale bridge gestart'
-);
+server.on('error',e=>{console.error('Lokale bridge:',e.message);process.exit(1);});
+process.on('SIGTERM',()=>{void disconnectTS().finally(()=>process.exit(0));});
+process.on('SIGINT',()=>{void disconnectTS().finally(()=>process.exit(0));});
+console.log('TeamSpeak Heerlen lokale bridge gestart (127.0.0.1, toegang afgeschermd)');
