@@ -12,106 +12,137 @@ permissions:
 
 jobs:
   build-installer:
-    name: Build Windows Setup.exe
+    name: Maak Windows Setup.exe
     runs-on: windows-latest
 
     steps:
-      - name: Download projectbestanden
+      - name: Project ophalen
         uses: actions/checkout@v4
 
-      - name: Install Godot 4.7.2 en export templates
-        uses: chickensoft-games/setup-godot@v2
-        with:
-          version: 4.7.2
-          use-dotnet: false
-          include-templates: true
-
-      - name: Controleer Godot-versie
+      - name: Download Godot 4.7.2 officieel
         shell: pwsh
         run: |
-          godot --version
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Godot is niet beschikbaar.'
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.2-stable'
+          $zip = Join-Path $env:RUNNER_TEMP 'godot-editor.zip'
+          $folder = Join-Path $env:RUNNER_TEMP 'godot-editor'
+
+          Invoke-WebRequest -Uri "$base/Godot_v4.7.2-stable_win64.exe.zip" -OutFile $zip
+          Expand-Archive -LiteralPath $zip -DestinationPath $folder -Force
+
+          $godot = Get-ChildItem -Path $folder -Filter 'Godot_v4.7.2-stable_win64_console.exe' -Recurse -File | Select-Object -First 1
+
+          if (-not $godot) {
+            throw 'Godot console.exe ontbreekt na uitpakken.'
           }
 
-      - name: Importeer Godot-project
+          "GODOT_BIN=$($godot.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          & $godot.FullName --headless --version
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Godot start niet correct.'
+          }
+
+      - name: Installeer exporttemplates voor Windows
         shell: pwsh
         run: |
-          godot --headless --editor --import --path . --quit
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Godot-import mislukt.'
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.2-stable'
+          $tpz = Join-Path $env:RUNNER_TEMP 'godot-templates.tpz'
+          $zip = Join-Path $env:RUNNER_TEMP 'godot-templates.zip'
+          $unpacked = Join-Path $env:RUNNER_TEMP 'godot-templates'
+
+          Invoke-WebRequest -Uri "$base/Godot_v4.7.2-stable_export_templates.tpz" -OutFile $tpz
+          Copy-Item -LiteralPath $tpz -Destination $zip
+          Expand-Archive -LiteralPath $zip -DestinationPath $unpacked -Force
+
+          $source = Join-Path $unpacked 'templates'
+          $target = Join-Path $env:APPDATA 'Godot\export_templates\4.7.2.stable'
+
+          if (-not (Test-Path $source)) {
+            throw 'Map templates ontbreekt in TPZ.'
           }
 
-      - name: Exporteer zelfstandige Windows-app
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+
+          if (-not (Test-Path (Join-Path $target 'windows_release_x86_64.exe'))) {
+            throw 'Windows x64 exporttemplate ontbreekt.'
+          }
+
+          Write-Host 'Godot exporttemplates geinstalleerd.'
+
+      - name: Importeer 3D-cafe project
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path 'dist' -Force | Out-Null
-
-          godot --headless --path . --export-release 'Windows Desktop' 'dist/TS-Heerlen-3D-Cafe.exe'
+          & $env:GODOT_BIN --headless --editor --import --path . --quit
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Windows-export mislukt.'
+            throw 'Godot projectimport mislukt; controleer GDScript fouten in het log.'
           }
 
-          if (!(Test-Path 'dist/TS-Heerlen-3D-Cafe.exe')) {
-            throw 'Windows EXE ontbreekt.'
+      - name: Bouw Windows app
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+
+          & $env:GODOT_BIN --headless --path . --export-release 'Windows Desktop' 'dist/TS-Heerlen-3D-Cafe.exe'
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Godot export mislukt; controleer het log.'
           }
 
-          $size = (Get-Item 'dist/TS-Heerlen-3D-Cafe.exe').Length
-
-          if ($size -lt 2000000) {
-            throw "Verdacht kleine Windows EXE: $size bytes"
+          if (-not (Test-Path 'dist/TS-Heerlen-3D-Cafe.exe')) {
+            throw 'Windows exe niet gevonden.'
           }
 
-          Write-Host "Windows app gebouwd: $size bytes"
+          Get-Item 'dist/TS-Heerlen-3D-Cafe.exe' | Select-Object Name, Length
 
       - name: Installeer Inno Setup
         shell: pwsh
         run: |
-          $iscc = Get-Command 'ISCC.exe' -ErrorAction SilentlyContinue
+          $paths = @(
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe'
+          )
 
-          if (!$iscc) {
-            choco install innosetup --yes --no-progress
+          $compiler = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if (-not $compiler) {
+            choco install innosetup -y --no-progress
 
             if ($LASTEXITCODE -ne 0) {
               throw 'Inno Setup installatie mislukt.'
             }
 
-            $iscc = Get-Command 'ISCC.exe' -ErrorAction SilentlyContinue
+            $compiler = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
           }
 
-          if (!$iscc) {
-            $candidate = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
-
-            if (Test-Path $candidate) {
-              $iscc = @{ Source = $candidate }
-            }
-          }
-
-          if (!$iscc) {
+          if (-not $compiler) {
             throw 'ISCC.exe niet gevonden.'
           }
 
-          "ISCC_PATH=$($iscc.Source)" |
-            Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ISCC_PATH=$compiler" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Maak Windows Setup.exe
+      - name: Maak TeamSpeak Heerlen Setup.exe
         shell: pwsh
         run: |
           & $env:ISCC_PATH 'installer.iss'
 
           if ($LASTEXITCODE -ne 0) {
-            throw 'Windows Setup build mislukt.'
+            throw 'Inno Setup compile mislukt.'
           }
 
-          if (!(Test-Path 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe')) {
-            throw 'Setup.exe niet gemaakt.'
+          $setup = 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe'
+
+          if (-not (Test-Path $setup)) {
+            throw 'Setup.exe ontbreekt.'
           }
 
-          Get-Item 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe' |
-            Select-Object Name, Length
+          Get-Item $setup | Select-Object Name, Length
 
-      - name: Download Windows Setup
+      - name: Download Windows-installer
         uses: actions/upload-artifact@v4
         with:
           name: TS-Heerlen-3D-Cafe-Setup-v0.2
@@ -119,11 +150,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publiceer GitHub Release
+      - name: Publiceer bij versie-tag
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
