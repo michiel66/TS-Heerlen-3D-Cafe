@@ -1,8 +1,8 @@
 
 extends Node
-## TeamSpeak Heerlen v0.4
-## Lokale TeamSpeak-module zonder aparte clientplugin.
-## FIX: ongeldige handshake_timeout verwijderd.
+## TeamSpeak Heerlen 3D Café v0.4.2
+## Lokale Node-module via beveiligde WebSocket.
+## Iedere start gebruikt een eigen lokale poort.
 
 signal status_updated(connected: bool, text: String)
 signal roster_updated(
@@ -12,13 +12,17 @@ signal roster_updated(
 )
 signal voice_active(client_id: String)
 
-const PORT := 39453
+var port: int = 39453
 const FRAME := 960
 
 var socket: WebSocketPeer
 var secret := ""
 var pid := -1
 var authenticated := false
+var bridge_ready := false
+var pending_connect := false
+var socket_wait_elapsed := 0.0
+var bridge_warning_shown := false
 var connected := false
 var attempting := false
 var retry_elapsed := 0.0
@@ -36,11 +40,17 @@ var last_message := "Spraakmodule starten…"
 
 func _ready() -> void:
     secret = Crypto.new().generate_random_bytes(24).hex_encode()
+
+    var random_port := RandomNumberGenerator.new()
+    random_port.randomize()
+    port = random_port.randi_range(40000, 59999)
+
     _setup_audio()
     _launch_bridge()
     _try_socket()
 
 func _setup_audio() -> void:
+    # Microfoon op aparte bus om terugkoppeling te voorkomen.
     var bus_index: int = AudioServer.get_bus_count()
     AudioServer.add_bus(bus_index)
     AudioServer.set_bus_name(bus_index, "HeerlenMic")
@@ -69,7 +79,6 @@ func _setup_audio() -> void:
 
 func _launch_bridge() -> void:
     var exe_path: String = OS.get_executable_path().get_base_dir()
-
     var node_exe: String = exe_path.path_join(
         "voice-bridge"
     ).path_join("node.exe")
@@ -97,7 +106,12 @@ func _launch_bridge() -> void:
 
     pid = OS.create_process(
         node_exe,
-        PackedStringArray([source, secret, data_dir]),
+        PackedStringArray([
+            source,
+            secret,
+            data_dir,
+            str(port)
+        ]),
         false
     )
 
@@ -109,15 +123,15 @@ func _try_socket() -> void:
     if pid <= 0:
         return
 
-    # Godot 4.7.2 FIX:
-    # WebSocketPeer heeft geen handshake_timeout.
     socket = WebSocketPeer.new()
 
+    # Godot 4.7.2: geen handshake_timeout gebruiken.
     var err: int = socket.connect_to_url(
-        "ws://127.0.0.1:%d" % PORT
+        "ws://127.0.0.1:%d" % port
     )
 
     if err != OK:
+        socket = null
         last_message = "Wachten op lokale spraakmodule…"
         return
 
@@ -157,6 +171,7 @@ func _process(delta: float) -> void:
 
             socket = null
             authenticated = false
+            bridge_ready = false
             attempting = false
 
     retry_elapsed += delta
@@ -164,6 +179,17 @@ func _process(delta: float) -> void:
     if socket == null and pid > 0 and retry_elapsed > 0.8:
         retry_elapsed = 0.0
         _try_socket()
+
+    if pid > 0 and not bridge_ready:
+        socket_wait_elapsed += delta
+
+        if socket_wait_elapsed > 8.0 and not bridge_warning_shown:
+            bridge_warning_shown = true
+            last_message = (
+                "Lokale TeamSpeak-module niet bereikbaar; "
+                + "controleer installatie of Windows-beveiliging."
+            )
+            status_updated.emit(false, last_message)
 
     _pump_microphone()
     _pump_speaker()
@@ -183,6 +209,19 @@ func _receive(raw: String) -> void:
 
     match str(message.get("type", "")):
         "status":
+            if str(message.get("message", "")) == "Lokale spraakmodule gereed":
+                bridge_ready = true
+                bridge_warning_shown = false
+                socket_wait_elapsed = 0.0
+
+                if pending_connect:
+                    pending_connect = false
+                    _send({
+                        "type": "connect",
+                        "nickname": nickname,
+                        "channel": channel
+                    })
+
             connected = bool(
                 message.get("connected", false)
             )
@@ -202,14 +241,15 @@ func _receive(raw: String) -> void:
             last_message = str(
                 message.get("message", "Onbekende fout")
             )
-
             status_updated.emit(
                 connected,
                 "TeamSpeak: " + last_message
             )
 
         "roster":
-            var users: Variant = message.get("users", [])
+            var users: Variant = message.get(
+                "users", []
+            )
 
             if typeof(users) == TYPE_ARRAY:
                 roster_updated.emit(
@@ -235,12 +275,15 @@ func connect_teamspeak(
     nickname = name_value
     channel = room
 
-    if not authenticated:
+    if not bridge_ready:
+        pending_connect = true
         status_updated.emit(
             false,
-            "Spraakmodule nog niet klaar. Probeer opnieuw."
+            "Wachten op de lokale spraakmodule; verbinden zodra die klaar is."
         )
         return
+
+    pending_connect = false
 
     _send({
         "type": "connect",
@@ -249,8 +292,11 @@ func connect_teamspeak(
     })
 
 func disconnect_teamspeak() -> void:
+    pending_connect = false
     set_ptt(false)
-    _send({"type": "disconnect"})
+    _send({
+        "type": "disconnect"
+    })
 
 func set_ptt(active: bool) -> void:
     ptt = active and connected
@@ -323,9 +369,7 @@ func _queue_pcm(encoded: String) -> void:
         if value >= 32768:
             value -= 65536
 
-        var normalized: float = (
-            float(value) / 32768.0
-        )
+        var normalized: float = float(value) / 32768.0
 
         frames[i] = Vector2(
             normalized,
