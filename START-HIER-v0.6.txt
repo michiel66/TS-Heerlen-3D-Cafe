@@ -1,0 +1,39 @@
+TEAM SPEAK HEERLEN 3D CAFÉ — LOOK v0.6
+======================================
+
+Dit is een COMPLETE VISUELE UPDATE voor het BESTAANDE GitHub-project:
+https://github.com/michiel66/TS-Heerlen-3D-Cafe
+
+BELANGRIJK: Alle TeamSpeak- en microfoonbestanden blijven ongewijzigd:
+- bridge/main.cjs
+- bridge/protocol.cjs
+- scripts/teamspeak_bridge.gd
+- scripts/main.gd
+- scripts/online_avatars.gd
+- scripts/avatar.gd
+
+Installeren:
+1. Maak desgewenst een backup/download van de werkende GitHub-versie.
+2. Pak de ZIP uit.
+3. Upload alle bestanden en mappen uit deze ZIP naar de ROOT van je huidige GitHub-repository.
+4. Vervang bestaande bestanden als GitHub dit vraagt, met behoud van de mapstructuur.
+5. Open GitHub > Actions. Kies de NIEUWSTE, GROENE build.
+6. Download het artifact 'TS-Heerlen-3D-Cafe-Setup-v0.6'.
+7. Sluit het café (en bijbehorende Node.js-module) voor installatie.
+8. Installeer TS-Heerlen-3D-Cafe-Setup-v0.6.exe.
+9. Het label bovenin moet tonen: LOOK v0.6.
+
+Deze ZIP bevat:
+- scripts/cafe_look.gd           volledige 3D-makeover + HUD-stijl
+- scenes/main.tscn             startscene (zelfde koppeling met CafeLookUpgrade)
+- assets/textures/v06_*.png    negen nieuwe decoratieve/oppervlaktexturen
+- installer.iss                v0.6 versienummer en Setup-bestandsnaam
+- .github/workflows/windows.yml  Windows build voor v0.6
+- START-HIER-v0.6.txt          deze instructies
+
+De app blijft gebaseerd op procedureel gemaakte Godot-3D-objecten.
+Dat is zichtbaar rijker dan v0.5 maar geen fotorealistisch, extern 3D-interieur.
+De Node-tests zijn geslaagd, de volledige Windows-build en visuele weergave
+moeten nog op GitHub/Windows worden gecontroleerd.
+
+Verschijnt de LOOK v0.6-badge niet? Dan draait nog een oudere Setup.exe.

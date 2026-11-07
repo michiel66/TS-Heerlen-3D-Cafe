@@ -1,6 +1,8 @@
-
+; TeamSpeak Heerlen 3D Cafe — echte Windows-installer
+; Godot 4.7.2 wordt tijdens GitHub Actions export meegebouwd.
+; Bezoekers hebben Godot NIET nodig.
 #define MyAppName "TeamSpeak Heerlen 3D Cafe"
-#define MyAppVersion "0.4.0"
+#define MyAppVersion "0.6.0"
 #define MyAppExeName "TS-Heerlen-3D-Cafe.exe"
 
 [Setup]
@@ -14,7 +16,7 @@ DefaultDirName={localappdata}\Programs\TeamSpeak Heerlen 3D Cafe
 DefaultGroupName=TeamSpeak Heerlen 3D Cafe
 DisableProgramGroupPage=yes
 OutputDir=dist\installer
-OutputBaseFilename=TS-Heerlen-3D-Cafe-Setup-v0.4
+OutputBaseFilename=TS-Heerlen-3D-Cafe-Setup-v0.6
 SetupIconFile=assets\installer.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
@@ -36,7 +38,11 @@ Name: "desktopicon"; Description: "Maak een bureaubladsnelkoppeling"; GroupDescr
 
 [Files]
 Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; Export preset bevat binary_format/embed_pck=true. Eventuele losse PCK wordt ook meegenomen.
 Source: "dist\*.pck"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+
+; Zelfstandige lokale TS3 bridge met Node runtime en Opus-codec.
+; Geen installatie van Node, Godot of TeamSpeak-plugin nodig op de doelcomputer.
 Source: "dist\bridge-runtime\*"; DestDir: "{app}\voice-bridge"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
