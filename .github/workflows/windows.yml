@@ -1,0 +1,129 @@
+
+name: TeamSpeak Heerlen - Windows Setup
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-installer:
+    name: Build Windows Setup.exe
+    runs-on: windows-latest
+
+    steps:
+      - name: Download projectbestanden
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.2 en export templates
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: true
+
+      - name: Controleer Godot-versie
+        shell: pwsh
+        run: |
+          godot --version
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Godot is niet beschikbaar.'
+          }
+
+      - name: Importeer Godot-project
+        shell: pwsh
+        run: |
+          godot --headless --editor --import --path . --quit
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Godot-import mislukt.'
+          }
+
+      - name: Exporteer zelfstandige Windows-app
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path 'dist' -Force | Out-Null
+
+          godot --headless --path . --export-release 'Windows Desktop' 'dist/TS-Heerlen-3D-Cafe.exe'
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Windows-export mislukt.'
+          }
+
+          if (!(Test-Path 'dist/TS-Heerlen-3D-Cafe.exe')) {
+            throw 'Windows EXE ontbreekt.'
+          }
+
+          $size = (Get-Item 'dist/TS-Heerlen-3D-Cafe.exe').Length
+
+          if ($size -lt 2000000) {
+            throw "Verdacht kleine Windows EXE: $size bytes"
+          }
+
+          Write-Host "Windows app gebouwd: $size bytes"
+
+      - name: Installeer Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = Get-Command 'ISCC.exe' -ErrorAction SilentlyContinue
+
+          if (!$iscc) {
+            choco install innosetup --yes --no-progress
+
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Inno Setup installatie mislukt.'
+            }
+
+            $iscc = Get-Command 'ISCC.exe' -ErrorAction SilentlyContinue
+          }
+
+          if (!$iscc) {
+            $candidate = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+
+            if (Test-Path $candidate) {
+              $iscc = @{ Source = $candidate }
+            }
+          }
+
+          if (!$iscc) {
+            throw 'ISCC.exe niet gevonden.'
+          }
+
+          "ISCC_PATH=$($iscc.Source)" |
+            Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Maak Windows Setup.exe
+        shell: pwsh
+        run: |
+          & $env:ISCC_PATH 'installer.iss'
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Windows Setup build mislukt.'
+          }
+
+          if (!(Test-Path 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe')) {
+            throw 'Setup.exe niet gemaakt.'
+          }
+
+          Get-Item 'dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe' |
+            Select-Object Name, Length
+
+      - name: Download Windows Setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: TS-Heerlen-3D-Cafe-Setup-v0.2
+          path: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publiceer GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/installer/TS-Heerlen-3D-Cafe-Setup-v0.2.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
