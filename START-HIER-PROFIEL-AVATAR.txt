@@ -1,0 +1,31 @@
+TEAMSPEAK HEERLEN 3D CAFE - PROFIEL / AVATARKIEZER v0.8.1
+======================================================
+
+Deze update voegt een avatarkiezer toe in Instellingen > Profiel.
+
+Bestanden die je naar je BESTAANDE GitHub-project uploadt:
+- scripts/hud.gd
+- scripts/main.gd
+- tests/profile_avatar_test.gd (optionele extra test)
+
+BELANGRIJK: Vervang NIET .github/workflows/windows.yml, het TeamSpeak
+bridge-script of het avatar-downloadscript. Zo blijft je actuele
+GitHub Actions-reparatie intact.
+
+GitHub: https://github.com/michiel66/TS-Heerlen-3D-Cafe
+Download de ZIP en pak hem uit. Upload de drie bestanden met dezelfde mappen
+(plus START-HIER als je wilt) en klik op Commit changes.
+
+In de app: Instellingen > Profiel. Selecteer 001-100 via dropdown of pijlen.
+Je 3D-avatar verandert onmiddellijk. De keuze wordt opgeslagen in
+user://cafe_profiel.cfg onder profile/r1_avatar_index en na herstart geladen.
+De sneltoetsen F7 (volgende) en Shift+F7 (vorige) blijven werken.
+
+BELANGRIJKE BEPERKING:
+Een gebruiker ziet de EIGEN keuze op zijn eigen computer. Een andere
+gebruiker ziet zonder aparte synchronisatie op de server mogelijk een
+andere avatar voor jouw naam. TeamSpeak-PTT en voice zijn niet aangepast.
+
+Build-test: gebruik je bestaande GitHub Actions workflow.
+Optionele Godot-controle (vanaf projectmap):
+  godot --headless --path . --script res://tests/profile_avatar_test.gd

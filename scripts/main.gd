@@ -62,6 +62,8 @@ func _ready() -> void:
     hud.action_requested.connect(_ui_action)
     hud.nickname_changed.connect(_update_nickname)
     hud.channel_changed.connect(_update_channel)
+    hud.avatar_selected.connect(_select_profile_avatar)
+    hud.set_avatar_selection(player.model_index)
     # Verberg het fout-/startscherm pas nadat camera, wereld en HUD zijn aangemaakt.
     var boot: CanvasLayer = get_node_or_null("BootScreen") as CanvasLayer
     if boot != null:
@@ -94,6 +96,7 @@ func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F7:
         var new_index: int = player.cycle_avatar(-1 if event.shift_pressed else 1)
         if new_index >= 0:
+            hud.set_avatar_selection(new_index)
             profile.set_value("profile", "r1_avatar_index", new_index)
             profile.save("user://cafe_profiel.cfg")
             hud.set_status("100 Avatars R1: %d van %d (F7 = volgende, Shift+F7 = vorige)" % [new_index + 1, player.avatar_count()])
@@ -201,3 +204,21 @@ func _update_channel(name_value: String) -> void:
     profile.set_value("profile", "channel", current_channel)
     profile.save("user://cafe_profiel.cfg")
     hud.set_status("Kanaal opgeslagen. Verbreek en verbind opnieuw om te wisselen.")
+
+func _select_profile_avatar(index: int) -> void:
+    # Alleen de lokale avatar: TeamSpeak-verbinding en online-roster blijven intact.
+    if not is_instance_valid(player):
+        return
+    var previous_index: int = player.model_index
+    if not player.select_avatar(index):
+        player.select_avatar(previous_index)
+        hud.set_avatar_selection(player.model_index)
+        hud.set_status("Deze R1-avatar kan niet worden geladen. Vorige avatar hersteld.")
+        return
+    profile.set_value("profile", "r1_avatar_index", player.model_index)
+    var err: Error = profile.save("user://cafe_profiel.cfg")
+    if err != OK:
+        hud.set_status("Avatar geselecteerd, maar opslaan mislukt.")
+        return
+    hud.set_avatar_selection(player.model_index)
+    hud.set_status("Jouw R1-avatar %d van %d is opgeslagen." % [player.model_index + 1, player.avatar_count()])

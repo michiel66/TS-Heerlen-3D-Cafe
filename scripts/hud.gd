@@ -5,6 +5,9 @@ extends CanvasLayer
 signal action_requested(action: String)
 signal nickname_changed(value: String)
 signal channel_changed(value: String)
+signal avatar_selected(index: int)
+
+const R1_CATALOG = preload("res://scripts/r1_avatar_catalog.gd")
 
 const MINIMAP_SCRIPT = preload("res://scripts/minimap.gd")
 var avatar: Node3D
@@ -27,6 +30,12 @@ var overlay_title: Label
 var overlay_text: Label
 var chat_entry: LineEdit
 var nickname_entry: LineEdit
+var avatar_selector: OptionButton
+var avatar_detail: Label
+var settings_tabs: HBoxContainer
+var profile_form: VBoxContainer
+var teamspeak_form: VBoxContainer
+var overlay_scroll: ScrollContainer
 
 func _ready() -> void:
     root = Control.new()
@@ -166,8 +175,8 @@ func _overlay() -> void:
     overlay.anchor_bottom = 0.5
     overlay.offset_left = -290
     overlay.offset_right = 290
-    overlay.offset_top = -190
-    overlay.offset_bottom = 160
+    overlay.offset_top = -260
+    overlay.offset_bottom = 260
     overlay.visible = false
     root.add_child(overlay)
     var body := VBoxContainer.new()
@@ -186,27 +195,85 @@ func _overlay() -> void:
     overlay_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     overlay_text.custom_minimum_size = Vector2(0, 120)
     overlay_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    var roster_scroll := ScrollContainer.new()
-    roster_scroll.custom_minimum_size = Vector2(0, 130)
-    roster_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    body.add_child(roster_scroll)
-    roster_scroll.add_child(overlay_text)
+    overlay_scroll = ScrollContainer.new()
+    overlay_scroll.custom_minimum_size = Vector2(0, 130)
+    overlay_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    body.add_child(overlay_scroll)
+    overlay_scroll.add_child(overlay_text)
+
+    settings_tabs = HBoxContainer.new()
+    settings_tabs.visible = false
+    settings_tabs.add_theme_constant_override("separation", 8)
+    body.add_child(settings_tabs)
+    var profile_tab := Button.new()
+    profile_tab.text = "👤 Profiel"
+    profile_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    profile_tab.pressed.connect(_show_settings_tab.bind("profile"))
+    settings_tabs.add_child(profile_tab)
+    var teamspeak_tab := Button.new()
+    teamspeak_tab.text = "🎙 TeamSpeak"
+    teamspeak_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    teamspeak_tab.pressed.connect(_show_settings_tab.bind("teamspeak"))
+    settings_tabs.add_child(teamspeak_tab)
+
+    profile_form = VBoxContainer.new()
+    profile_form.visible = false
+    profile_form.add_theme_constant_override("separation", 8)
+    body.add_child(profile_form)
+    profile_form.add_child(_lbl("Gebruikersnaam", 14, Color("ffbb78")))
     nickname_entry = LineEdit.new()
     nickname_entry.placeholder_text = "Jouw naam"
     nickname_entry.text = nickname
-    nickname_entry.visible = false
-    body.add_child(nickname_entry)
+    profile_form.add_child(nickname_entry)
     var save := Button.new()
-    save.text = "Naam opslaan"
-    save.visible = false
+    save.text = "Profielnaam opslaan"
     save.pressed.connect(_save_nickname)
-    body.add_child(save)
+    profile_form.add_child(save)
     nickname_entry.set_meta("save_button", save)
+
+    profile_form.add_child(HSeparator.new())
+    profile_form.add_child(_lbl("Kies jouw 3D-avatar · 100Avatars R1", 15, Color("ffbb78")))
+    var avatar_row := HBoxContainer.new()
+    avatar_row.add_theme_constant_override("separation", 8)
+    profile_form.add_child(avatar_row)
+    var prev := Button.new()
+    prev.text = "◀"
+    prev.tooltip_text = "Vorige avatar"
+    prev.pressed.connect(_cycle_profile_avatar.bind(-1))
+    avatar_row.add_child(prev)
+    avatar_selector = OptionButton.new()
+    avatar_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    avatar_selector.item_selected.connect(_avatar_option_changed)
+    avatar_row.add_child(avatar_selector)
+    var nxt := Button.new()
+    nxt.text = "▶"
+    nxt.tooltip_text = "Volgende avatar"
+    nxt.pressed.connect(_cycle_profile_avatar.bind(1))
+    avatar_row.add_child(nxt)
+    avatar_detail = _lbl("", 13, Color("a1ffb9"))
+    avatar_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    profile_form.add_child(avatar_detail)
+    var avatar_hint := _lbl("Keuze direct zichtbaar in het café en automatisch bewaard op deze pc.", 12, Color("d5d0cb"))
+    avatar_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    profile_form.add_child(avatar_hint)
+    _populate_avatar_selector()
+
+    teamspeak_form = VBoxContainer.new()
+    teamspeak_form.visible = false
+    teamspeak_form.add_theme_constant_override("separation", 9)
+    body.add_child(teamspeak_form)
+    teamspeak_form.add_child(_lbl("TeamSpeak-kanaal", 15, Color("ffbb78")))
     channel_entry = LineEdit.new()
     channel_entry.placeholder_text = "TeamSpeak-kanaal (leeg = standaardkanaal)"
     channel_entry.text = current_channel
-    channel_entry.visible = false
-    body.add_child(channel_entry)
+    teamspeak_form.add_child(channel_entry)
+    var save_channel := Button.new()
+    save_channel.text = "TeamSpeak-kanaal opslaan"
+    save_channel.pressed.connect(_save_channel)
+    teamspeak_form.add_child(save_channel)
+    var channel_hint := _lbl("Kanaalwijzigingen gelden na opnieuw verbinden.", 13, Color("d5d0cb"))
+    teamspeak_form.add_child(channel_hint)
+
     chat_entry = LineEdit.new()
     chat_entry.placeholder_text = "Lokale notitie typen (geen chatbericht naar anderen)"
     chat_entry.visible = false
@@ -227,10 +294,75 @@ func _save_nickname() -> void:
         return
     nickname = fresh
     nickname_changed.emit(fresh)
-    current_channel = channel_entry.text.strip_edges().substr(0, 120)
-    channel_changed.emit(current_channel)
     set_status("Naam ingesteld: " + fresh)
     overlay.visible = false
+
+func _save_channel() -> void:
+    current_channel = channel_entry.text.strip_edges().substr(0, 120)
+    channel_changed.emit(current_channel)
+    set_status("TeamSpeak-kanaal opgeslagen. Verbind opnieuw om te wisselen.")
+    overlay.visible = false
+
+func _avatar_name(index: int) -> String:
+    if index < 0 or index >= R1_CATALOG.AVATARS.size():
+        return "Onbekend"
+    var raw: String = R1_CATALOG.AVATARS[index].get_file().get_basename()
+    var parts: PackedStringArray = raw.split("_")
+    if parts.size() > 2:
+        return " ".join(parts.slice(2))
+    return raw.replace("_", " ")
+
+func _populate_avatar_selector() -> void:
+    avatar_selector.clear()
+    for index in range(R1_CATALOG.AVATARS.size()):
+        avatar_selector.add_item("%03d  ·  %s" % [index + 1, _avatar_name(index)], index)
+    if avatar_selector.item_count == 0:
+        avatar_selector.add_item("Geen R1-modellen gevonden", -1)
+        avatar_selector.disabled = true
+        avatar_detail.text = "De R1-collectie is nog niet geimporteerd."
+        return
+    avatar_selector.disabled = false
+    if is_instance_valid(avatar) and avatar.has_method("avatar_count"):
+        set_avatar_selection(int(avatar.model_index))
+    else:
+        set_avatar_selection(0)
+
+func set_avatar_selection(index: int) -> void:
+    if not is_instance_valid(avatar_selector) or avatar_selector.disabled:
+        return
+    var total: int = R1_CATALOG.AVATARS.size()
+    if total == 0:
+        return
+    var selected: int = posmod(index, total)
+    avatar_selector.select(selected)
+    avatar_detail.text = "Avatar %d van %d — %s" % [selected + 1, total, _avatar_name(selected)]
+
+func _avatar_option_changed(index: int) -> void:
+    var selected: int = avatar_selector.get_item_id(index)
+    if selected >= 0:
+        set_avatar_selection(selected)
+        avatar_selected.emit(selected)
+
+func _cycle_profile_avatar(direction: int) -> void:
+    if not is_instance_valid(avatar_selector) or avatar_selector.disabled:
+        set_status("Geen R1-avatars beschikbaar.")
+        return
+    var next_index: int = posmod(avatar_selector.selected + direction, R1_CATALOG.AVATARS.size())
+    _avatar_option_changed(next_index)
+
+func _show_settings_tab(tab: String) -> void:
+    var is_profile := tab == "profile"
+    overlay_title.text = "Instellingen · Profiel" if is_profile else "Instellingen · TeamSpeak"
+    overlay_scroll.custom_minimum_size = Vector2(0, 50)
+    overlay_text.custom_minimum_size = Vector2(0, 42)
+    profile_form.visible = is_profile
+    teamspeak_form.visible = not is_profile
+    overlay_text.text = (
+        "Kies je eigen R1-avatar en wijzig je gebruikersnaam." if is_profile else
+        "Stel hier het TeamSpeak-kanaal in. De bestaande audio/PTT blijft hetzelfde."
+    )
+    if is_profile and is_instance_valid(avatar):
+        set_avatar_selection(int(avatar.model_index))
 
 func _chat_submitted(text: String) -> void:
     var message := text.strip_edges()
@@ -242,9 +374,11 @@ func _chat_submitted(text: String) -> void:
 func show_panel(action: String) -> void:
     overlay.visible = true
     chat_entry.visible = false
-    nickname_entry.visible = false
-    channel_entry.visible = false
-    (nickname_entry.get_meta("save_button") as Button).visible = false
+    settings_tabs.visible = false
+    profile_form.visible = false
+    teamspeak_form.visible = false
+    overlay_scroll.custom_minimum_size = Vector2(0, 130)
+    overlay_text.custom_minimum_size = Vector2(0, 120)
     match action:
         "chat":
             overlay_title.text = "Lokale chat / notities"
@@ -261,11 +395,8 @@ func show_panel(action: String) -> void:
             overlay_title.text = "Locaties"
             overlay_text.text = "Café: koffiebar en zitplaatsen.\nDansvloer: verlichte danshoek achterin.\nRadiohoek: 27MC en TeamSpeak-presentatie.\n\nKlik de knoppen onderaan om te lopen naar een andere plek."
         "settings":
-            overlay_title.text = "TeamSpeak-instellingen"
-            overlay_text.text = "Stel je gebruikersnaam en optioneel een TS3-kanaalnaam in. Wijzigingen gelden na opnieuw verbinden."
-            nickname_entry.visible = true
-            channel_entry.visible = true
-            (nickname_entry.get_meta("save_button") as Button).visible = true
+            settings_tabs.visible = true
+            _show_settings_tab("profile")
         _:
             overlay_title.text = "TeamSpeak Heerlen 3D Café"
             overlay_text.text = "Godot 3D-café met een ingebouwde, lokale TeamSpeak-client via PTT-Crosslink-techniek.\nLive TeamSpeak-leden krijgen nu hun eigen avatar in het café.\nDe posities zijn vaste weergaveplekken: lopen van andere gebruikers wordt nog niet gesynchroniseerd."
