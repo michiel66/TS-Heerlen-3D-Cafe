@@ -1,12 +1,15 @@
+
 extends Node3D
 ## Night Club world chooser: no changes to main.gd, hud.gd or TeamSpeak PTT.
 ## The world is a local visual choice; it does NOT synchronize the remote TS3 clients.
 
 const NIGHT_CLUB_PATH := "res://assets/worlds/night_club/night_club.glb"
+# 1.0 = origineel; 2.4 = ongeveer 22 x 23 meter. Alleen Night Club wordt vergroot.
+const CLUB_SCALE: float = 2.4
 const CAFE_SPAWN := Vector3(2.3, 0.15, 5.8)
-const CLUB_SPAWN := Vector3(0.0, 0.15, 3.2)
-const CLUB_DANCE := Vector3(0.0, 0.15, 0.6)
-const CLUB_DJ := Vector3(0.0, 0.15, -1.7)
+const CLUB_SPAWN := Vector3(0.0, 0.15, 3.2 * CLUB_SCALE)
+const CLUB_DANCE := Vector3(0.0, 0.15, 0.6 * CLUB_SCALE)
+const CLUB_DJ := Vector3(0.0, 0.15, -1.7 * CLUB_SCALE)
 
 var game: Node3D
 var hud
@@ -42,6 +45,9 @@ func _install() -> void:
 
     club_root = Node3D.new()
     club_root.name = "ImportedNightClub"
+    # Uniforme schaal schaalt zowel de GLB als de collider-wereld mee.
+    # Avatars blijven op hun bestaande grootte, buiten club_root.
+    club_root.scale = Vector3.ONE * CLUB_SCALE
     club_root.visible = false
     add_child(club_root)
 
@@ -94,7 +100,7 @@ func _install_settings_tab() -> void:
 
     world_picker = OptionButton.new()
     world_picker.add_item("TeamSpeak Heerlen – Origineel café", 0)
-    world_picker.add_item("Night Club – MBRODERI2", 1)
+    world_picker.add_item("Night Club – MBRODERI2 (2,4×)", 1)
     world_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     world_picker.item_selected.connect(_preview_world_selection)
     world_form.add_child(world_picker)
@@ -153,7 +159,7 @@ func _preview_world_selection(index: int) -> void:
     if not is_instance_valid(world_description):
         return
     if index == 1:
-        world_description.text = "Complete 3D-nachtclub (DJ-podium, dansvloer en bar). Met botsingen en eigen verlichting."
+        world_description.text = "Vergrote nachtclub: circa 22 × 23 meter (2,4× origineel). DJ-podium, dansvloer, bar en botsingen."
     else:
         world_description.text = "Het originele TeamSpeak Heerlen 3D Café met koffiebar, lounge en radiohoek."
 
@@ -201,7 +207,7 @@ func _activate_world(world_id: String, save_choice: bool) -> bool:
             if result != OK:
                 hud.set_status("Wereld actief, maar instellingen opslaan mislukt.")
                 return true
-    hud.set_status("Night Club van MBRODERI2 geladen (CC BY 4.0)." if world_id == "night_club" else "Origineel TeamSpeak Heerlen café geladen.")
+    hud.set_status("Night Club geladen: 2,4× vergroot · MBRODERI2 (CC BY 4.0)." if world_id == "night_club" else "Origineel TeamSpeak Heerlen café geladen.")
     return true
 
 func _load_night_club() -> bool:
@@ -242,11 +248,13 @@ func _load_night_club() -> bool:
     return true
 
 func _create_floor_and_edges() -> void:
-    _static_box(Vector3(0.0, -0.17, 0.0), Vector3(9.1, 0.30, 9.1))
-    _static_box(Vector3(-4.61, 1.45, 0), Vector3(0.18, 3.0, 9.1))
-    _static_box(Vector3(4.61, 1.45, 0), Vector3(0.18, 3.0, 9.1))
-    _static_box(Vector3(0, 1.45, -4.61), Vector3(9.1, 3.0, 0.18))
-    _static_box(Vector3(0, 1.45, 4.61), Vector3(9.1, 3.0, 0.18))
+    # Bronmodel ~9.27 x 9.78 m (x/z), dus groter dan de oude steunvloer.
+    # De hele club_root (ook deze statische botsingen) krijgt CLUB_SCALE.
+    _static_box(Vector3(0.0, -0.17, 0.0), Vector3(10.0, 0.30, 10.3))
+    _static_box(Vector3(-5.07, 3.1, 0), Vector3(0.18, 6.5, 10.3))
+    _static_box(Vector3(5.07, 3.1, 0), Vector3(0.18, 6.5, 10.3))
+    _static_box(Vector3(0, 3.1, -5.21), Vector3(10.0, 6.5, 0.18))
+    _static_box(Vector3(0, 3.1, 5.21), Vector3(10.0, 6.5, 0.18))
 
 func _static_box(at: Vector3, dimensions: Vector3) -> void:
     var body := StaticBody3D.new()
@@ -263,7 +271,8 @@ func _add_nightclub_light(at: Vector3, tint: Color, energy: float, radius: float
     light.position = at
     light.light_color = tint
     light.light_energy = energy
-    light.omni_range = radius
+    # Houd het bereik gelijk aan de grotere wereld (positie schaalt via club_root).
+    light.omni_range = radius * CLUB_SCALE
     light.shadow_enabled = false
     club_root.add_child(light)
 
@@ -290,7 +299,7 @@ func _set_guest_positions(nightclub: bool) -> void:
         var positions: Array[Vector3] = []
         for z in [3.4, 2.5, 1.6, 0.7, -0.2, -1.1, -2.0, -2.9]:
             for x in [-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]:
-                positions.append(Vector3(x, 0.15, z))
+                positions.append(Vector3(x * CLUB_SCALE, 0.15, z * CLUB_SCALE))
         visitors.slot_positions = positions
     else:
         visitors.slot_positions = old_visitor_positions.duplicate()
@@ -314,7 +323,7 @@ func _on_hud_action(action: String) -> void:
         return
     if action == "cafe":
         _teleport(CLUB_SPAWN)
-        hud.set_status("Night Club: bij de ingang.")
+        hud.set_status("Night Club: bij de ingang van de vergrote club.")
     elif action == "dance":
         _teleport(CLUB_DANCE)
         hud.set_status("Night Club: op de dansvloer. Druk F om te dansen.")
