@@ -1,0 +1,32 @@
+TeamSpeak Heerlen 3D Cafe – COFFEE SHOP WERELD update (v0.9.1)
+==============================================================
+
+MAAKT 3 KIESBARE 3D-WERELDEN:
+1. TeamSpeak Heerlen – originele cafe
+2. Night Club – MBRODERI2 – CC BY 4.0 (vorige update blijft behouden)
+3. Coffee Shop – majesticmaje – CC BY 3.0 (NIEUW)
+
+GITHUB-UPLOAD:
+1. Pak deze ZIP uit.
+2. Open https://github.com/michiel66/TS-Heerlen-3D-Cafe
+3. Kies Add file > Upload files.
+4. Sleep de mappen 'assets', 'scripts' en 'tests' uit de uitgepakte ZIP naar de uploadpagina.
+5. Klik Commit changes en open daarna GitHub Actions.
+6. Download de nieuwe Windows Setup na een succesvolle build.
+7. In de app: Instellingen > Wereldbeheer > Coffee Shop > Wereld laden en bewaren.
+
+BELANGRIJK: Vervang NIET de huidige windows.yml, main.gd, hud.gd,
+TeamSpeak-herstelbestanden of oude Night Club GLB. Alleen deze bestanden toevoegen/vervangen:
+- assets/worlds/coffee_shop/coffee_shop.glb (nieuw)
+- assets/worlds/coffee_shop/BRON-LICENTIE.txt (nieuw)
+- scripts/world_manager.gd (vervangen)
+- tests/world_manager_test.gd (vervangen, optionele Godot-test)
+
+De originele GLB is geleverd door de gebruiker en is niet aangepast.
+Het model heeft 178 meshes. De bron is Z-up; bij het laden wordt deze
+rechtop geroteerd en met factor 0.18 geschaald tot circa 24 x 25 meter.
+De spelers en avatars blijven buiten de geschaalde scene en blijven normaal groot.
+
+Licentie van Coffee Shop: CC BY 3.0. De originele maker moet vermeld blijven.
+Deze update is niet end-to-end getest met Godot. De Windows-build op GitHub
+zal moeten bevestigen dat de import van deze GLB geslaagd is.

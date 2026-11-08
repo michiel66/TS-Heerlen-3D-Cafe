@@ -25,13 +25,22 @@ func _run() -> void:
     if manager.current_world_id != "night_club" or game.get_node("CafeWorld").visible:
         _fail("Nachtclub is niet actief")
         return
+    if not manager._activate_world("coffee_shop", true):
+        _fail("Coffee Shop GLB kan niet worden geladen")
+        return
+    if manager.current_world_id != "coffee_shop" or not manager.coffee_root.visible:
+        _fail("Coffee Shop is niet actief")
+        return
+    if game.get_node("CafeWorld").visible or manager.club_root.visible:
+        _fail("Een andere wereld staat nog aan")
+        return
     if not manager._activate_world("cafe", true):
         _fail("Terugschakelen naar cafe mislukt")
         return
     if manager.current_world_id != "cafe" or not game.get_node("CafeWorld").visible:
         _fail("Cafe is niet hersteld")
         return
-    print("WORLD_MANAGER_TEST_OK: cafe ↔ Night Club, avatars en HUD behouden")
+    print("WORLD_MANAGER_TEST_OK: cafe ↔ Night Club ↔ Coffee Shop, avatars en HUD behouden")
     quit(0)
 
 func _fail(message: String) -> void:

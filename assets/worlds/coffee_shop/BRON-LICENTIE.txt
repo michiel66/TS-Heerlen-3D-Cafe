@@ -1,0 +1,13 @@
+Coffee Shop – 3D model door majesticmaje
+Bron: https://poly.pizza/m/FDG8rFhvv7
+Auteur: majesticmaje – https://poly.pizza/u/majesticmaje
+Licentie: Creative Commons Attribution 3.0 (CC BY 3.0)
+Licentietekst: https://creativecommons.org/licenses/by/3.0/
+
+Vereiste naamsvermelding:
+"Coffee Shop" by majesticmaje, licensed under CC BY 3.0, via Poly Pizza.
+
+De GLB is origineel aangeleverd door de gebruiker en blijft ongewijzigd.
+TeamSpeak Heerlen gebruikt dit model als optionele 3D-omgeving.
+De technische weergave in Godot draait het model 90 graden om de X-as
+naar Y-up en schaalt het met factor 0.18, zonder het bronbestand te wijzigen.
