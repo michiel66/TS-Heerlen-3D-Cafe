@@ -1,19 +1,5 @@
-TeamSpeak Heerlen 3D Café – Uiterlijk v0.5
-==========================================
-
-Deze update verandert UITSLUITEND de visuele vormgeving.
-
-1. Pak de ZIP uit.
-2. Upload scripts/cafe_look.gd als NIEUW bestand naar jouw GitHub-project.
-3. Vervang scènes/main.tscn (GitHub-pad: scenes/main.tscn) met het bestand uit de ZIP.
-4. Start de bestaande Windows GitHub Actions-build.
-5. Test het nieuwe café.
-
-LET OP: NIETS aanpassen aan scripts/main.gd, scripts/teamspeak_bridge.gd,
-bridge/main.cjs, scripts/online_avatars.gd, installer.iss of windows.yml.
-
-De Setup blijft v0.4 heten. Het betreft een visuele update v0.5 zonder
-wijzigingen aan de audio of TeamSpeak-verbinding.
-
-Alle modellen en materialen worden lokaal procedureel opgebouwd in Godot.
-Voor fotografisch realistische personages/interieurs zijn aparte 3D-assets nodig.
+TeamSpeak Heerlen 3D Café v0.3.0
+Upload alle bestanden incl. .github/ naar GitHub.
+GitHub Actions maakt TS-Heerlen-3D-Cafe-Setup-v0.3.exe.
+App: Instellingen -> naam en kanaal -> Verbinden -> druk V voor PTT.
+Geen aparte Teamspeak-plugin nodig. Live audio nog niet op echte server getest.

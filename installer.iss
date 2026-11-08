@@ -2,7 +2,7 @@
 ; Godot 4.7.2 wordt tijdens GitHub Actions export meegebouwd.
 ; Bezoekers hebben Godot NIET nodig.
 #define MyAppName "TeamSpeak Heerlen 3D Cafe"
-#define MyAppVersion "0.7.0"
+#define MyAppVersion "0.8.0"
 #define MyAppExeName "TS-Heerlen-3D-Cafe.exe"
 
 [Setup]
@@ -16,7 +16,7 @@ DefaultDirName={localappdata}\Programs\TeamSpeak Heerlen 3D Cafe
 DefaultGroupName=TeamSpeak Heerlen 3D Cafe
 DisableProgramGroupPage=yes
 OutputDir=dist\installer
-OutputBaseFilename=TS-Heerlen-3D-Cafe-Setup-v0.7
+OutputBaseFilename=TS-Heerlen-3D-Cafe-Setup-v0.8
 SetupIconFile=assets\installer.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2

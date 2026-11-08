@@ -15,7 +15,7 @@ func _test() -> void:
         return
     root.add_child(game)
     await process_frame
-    var required: Array[String] = ["CafeWorld", "LocalAvatar", "MainCamera", "CafeHUD", "LocalTeamSpeakBridge"]
+    var required: Array[String] = ["CafeWorld", "LocalAvatar", "MainCamera", "CafeHUD", "LocalTeamSpeakBridge", "OnlineVisitors"]
     for path in required:
         if game.get_node_or_null(path) == null:
             _fail("Opstartcomponent ontbreekt: " + path)

@@ -1,3 +1,22 @@
+# TeamSpeak Heerlen 3D Café v0.4 — Live online bezoekers als avatars
+
+**Nieuw:** zodra je met `Heerlen.MIJNTS3.NL` verbindt, worden de door TeamSpeak zichtbare online gebruikers als echte 3D-personages in het café geplaatst met hun eigen TeamSpeak-naam. Dit gebeurt via de al werkende v0.3 spraakmodule, zonder aanvullende TeamSpeak-plugin of 3D-server.
+
+- Gebruikers krijgen een eigen avatar en shirtkleur; je eigen account wordt niet dubbel getoond.
+- Avatars verschijnen, verdwijnen en krijgen bijgewerkte namen op basis van de ontvangen TS3-gebruikerslijst.
+- Een spreker krijgt een zichtbaar ▶-symbool boven zijn avatar.
+- De zes oude demo-avatars zijn verborgen wanneer TeamSpeak verbonden is.
+- Onder **Gebruikers** kun je de hele ontvangen ledenlijst doorbladeren; linksboven staat de eerste tien plus de resttelling.
+- De ingestelde posities zijn **lokale weergaveplekken**. Andere bezoekers lopen nog niet live met je mee; dat zou extra positiedata-uitwisseling tussen apps vragen.
+- Welke gebruikers de client kan zien hangt af van kanaalabonnementen en TeamSpeak-permissies; de app kan verborgen leden niet inventariseren. Ook TeamSpeak ServerQuery meldt deze beperking.
+- De werkende microfoon, PTT (V), Opus-audio en ingebouwde lokale bridge zijn behouden.
+
+**Installeren:** upload de inhoud van de ZIP naar de root van `michiel66/TS-Heerlen-3D-Cafe`, inclusief verborgen `.github/workflows/windows.yml`. GitHub Actions bouwt `TS-Heerlen-3D-Cafe-Setup-v0.4.exe`.
+
+**Tests:** Node.js bridge-tests via `npm test` in `bridge`, Godot `tests/smoke_test.gd` en `tests/online_avatars_test.gd`. Deze tests bevestigen geen echte TS3-verbinding; controleer na installatie met twee Windows-computers.
+
+---
+
 # TeamSpeak Heerlen 3D Café v0.3 – Direct TeamSpeak proefversie
 
 **Een Windows-setup, geen TeamSpeak 3-plugin en geen losse 3D-server.**

@@ -1,5 +1,5 @@
 extends Node3D
-## TeamSpeak Heerlen 3D Café – LOOK v0.7
+## TeamSpeak Heerlen 3D Café – LOOK v0.8
 ## UITSLUITEND DE VORMGEVING. Geen TeamSpeak-, audio-, PTT- of avatar-code.
 ## Ontworpen voor de bestaande CafeWorld + CafeHUD onder res://scenes/main.tscn.
 
@@ -34,7 +34,7 @@ func _install() -> void:
     var world := game.get_node_or_null("CafeWorld") as Node3D
     var hud := game.get_node_or_null("CafeHUD") as CanvasLayer
     if world == null:
-        push_warning("LOOK v0.7: CafeWorld nog niet gevonden; bestaande cafe blijft werken")
+        push_warning("LOOK v0.8: CafeWorld nog niet gevonden; bestaande cafe blijft werken")
         return
 
     _retexture_existing_world(world)
@@ -53,7 +53,7 @@ func _install() -> void:
         _reskin_hud(hud)
         _version_badge(hud)
 
-    print("HEERLEN LOOK v0.7 ACTIEF: PBR-structuren, koffiebar, lounge, neon, interface")
+    print("HEERLEN LOOK v0.8 ACTIEF: PBR-structuren, koffiebar, lounge, neon, interface")
 
 func _process(delta: float) -> void:
     light_time += delta
@@ -437,7 +437,7 @@ func _version_badge(hud: CanvasLayer) -> void:
     title.mouse_filter = Control.MOUSE_FILTER_IGNORE
     contents.add_child(title)
     var sub := Label.new()
-    sub.text = "3D CAFÉ  •  LOOK v0.7  •  LIVE VOICE"
+    sub.text = "3D CAFÉ  •  LOOK v0.8  •  100 AVATARS R1"
     sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     sub.add_theme_font_size_override("font_size", 12)
     sub.add_theme_color_override("font_color", AMBER)
@@ -446,7 +446,7 @@ func _version_badge(hud: CanvasLayer) -> void:
     hud.add_child(box)
 
 
-# ===== LOOK v0.7: verfijnde decoratie als losse, niet-solide laag =====
+# ===== LOOK v0.8: verfijnde decoratie als losse, niet-solide laag =====
 func _premium_lounge(world: Node3D) -> void:
     var leather := _texture_material(LEATHER_TEX, 0.84)
     var piping := _plain(Color("c69b69"), 0.36, 0.38)

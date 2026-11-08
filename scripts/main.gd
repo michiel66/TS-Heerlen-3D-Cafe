@@ -32,6 +32,9 @@ func _ready() -> void:
     cafe_world = cafe
     player = AVATAR_SCRIPT.new()
     player.display_name = nick
+    # -1 = vaste keuze uit dezelfde R1-collectie op basis van bijnaam.
+    # F7/Shift+F7 kiest een van de geimporteerde originele Poly Pizza modellen.
+    player.model_index = int(profile.get_value("profile", "r1_avatar_index", -1))
     player.name = "LocalAvatar"
     add_child(player)
     player.global_position = Vector3(2.3, 0.15, 5.8)
@@ -88,6 +91,15 @@ func _unhandled_input(event: InputEvent) -> void:
     elif event is InputEventMouseMotion and mouse_turning:
         yaw -= event.relative.x * 0.005
         pitch = clampf(pitch + event.relative.y * 0.004, -0.5, 0.55)
+    if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F7:
+        var new_index: int = player.cycle_avatar(-1 if event.shift_pressed else 1)
+        if new_index >= 0:
+            profile.set_value("profile", "r1_avatar_index", new_index)
+            profile.save("user://cafe_profiel.cfg")
+            hud.set_status("100 Avatars R1: %d van %d (F7 = volgende, Shift+F7 = vorige)" % [new_index + 1, player.avatar_count()])
+        else:
+            hud.set_status("Geen R1-avatars gevonden: importeer eerst de Poly Pizza GLTF-bundel.")
+        return
     if event is InputEventKey and not event.echo and event.physical_keycode == KEY_V:
         voice.set_ptt(event.pressed)
         hud.set_ptt_state(voice.ptt)

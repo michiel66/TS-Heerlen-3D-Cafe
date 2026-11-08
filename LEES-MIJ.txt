@@ -1,10 +1,19 @@
-TS HEERLEN UITERLIJK v0.5.1 - DUIDELIJKE VISUELE FIX
+TEAMSpeak HEERLEN 3D CAFE — VOLLEDIG PROJECT v0.8
+==================================================
 
-1. Vervang op GitHub uitsluitend scripts/cafe_look.gd door het nieuwe bestand.
-2. Laat scenes/main.tscn zoals het al is (dit verwijst naar cafe_look.gd).
-3. Gebruik de nieuw gestarte (groene) GitHub Actions-run na de commit.
-4. Download de Setup.exe uit die NIEUWSTE run. De bestandsnaam is nog v0.4; dat is de installernaam, niet de LOOK-versie.
-5. Sluit het cafe en de bijbehorende Node-module voor installatie.
-6. Na starten hoort bovenin: TEAMSPEAK HEERLEN | LOOK v0.5.1
+BELANGRIJK: Zie START-HIER-COMPLETE-v0.8.md voor alle stappen.
 
-Dit pakket verandert niet de Teamspeak-bridge, microfoon, avatars of Windows workflow.
+1. Pak deze ZIP uit.
+2. Ga naar GitHub: https://github.com/michiel66/TS-Heerlen-3D-Cafe
+3. Upload in EEN KEER de uitgepakte INHOUD (alle bestanden en mappen).
+4. Commit changes. GitHub Actions bouwt de Windows Setup.exe.
+
+De enige avatarbron is Polygonal Mind 100Avatars R1 (CC0).
+GitHub Actions downloadt automatisch de echte modellen tijdens de build.
+Dat betekent dat de 3D-modellen NIET fysiek in deze broncode-ZIP zitten.
+
+NIET de ZIP rechtstreeks uploaden als een enkel bestand: GitHub pakt die
+niet vanzelf uit. De mapstructuur moet behouden blijven.
+
+TS audio/PTT: de build herstelt de laatst geverifieerde TeamSpeak-sources
+van jouw eigen bestaande GitHub-commit voor het bouwen.

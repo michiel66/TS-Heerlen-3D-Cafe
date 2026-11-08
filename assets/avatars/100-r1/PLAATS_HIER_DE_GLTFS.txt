@@ -1,0 +1,2 @@
+GitHub Actions haalt de originele R1-modellen automatisch op.
+Handmatige import is niet nodig; zie START-HIER-COMPLETE-v0.8.md.

@@ -1,0 +1,10 @@
+100 AVATARS R1 - POLYGONAL MIND
+
+Bron: https://poly.pizza/bundle/100-Avatars-R1-amJ23JjkKG
+Auteur: Polygonal Mind
+Licentie voor bundel: Public Domain CC0 volgens Poly Pizza
+https://creativecommons.org/publicdomain/zero/1.0/
+
+De modellen worden NIET in dit updatepakket meegestuurd.
+De gebruiker downloadt de originele bundel van Poly Pizza en importeert de bestanden zelf.
+Broncode TeamSpeak Heerlen v0.8-import: eigen integratiescripts.

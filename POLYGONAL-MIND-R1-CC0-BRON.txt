@@ -1,0 +1,6 @@
+Polygonal Mind / 100Avatars R1
+https://github.com/PolygonalMind/100Avatars
+https://poly.pizza/bundle/100-Avatars-R1-amJ23JjkKG
+Public Domain / CC0 - https://creativecommons.org/publicdomain/zero/1.0/
+100 R1 FBX originals get downloaded during GitHub Actions build.
+No R2/R3 or third-party avatars.
