@@ -1,0 +1,11 @@
+"Night Club" by MBRODERI2
+Source: https://skfb.ly/ouHGD
+Original page: https://sketchfab.com/3d-models/night-club-51698a2a7171450ea40438a5dbc105f5
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/
+
+Model creator: MBRODERI2. Original 3D geometry, textures and source authorship remain theirs.
+Changes for TeamSpeak Heerlen: GLB material representations converted from
+KHR_materials_pbrSpecularGlossiness to core glTF 2.0 metallic-roughness for Godot import;
+original mesh geometry, node transformations and image textures were preserved.
+This derivative is included with attribution as required by CC BY 4.0.

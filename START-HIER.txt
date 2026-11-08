@@ -1,5 +1,41 @@
-TeamSpeak Heerlen 3D Café v0.3.0
-Upload alle bestanden incl. .github/ naar GitHub.
-GitHub Actions maakt TS-Heerlen-3D-Cafe-Setup-v0.3.exe.
-App: Instellingen -> naam en kanaal -> Verbinden -> druk V voor PTT.
-Geen aparte Teamspeak-plugin nodig. Live audio nog niet op echte server getest.
+TEAM SPEAK HEERLEN 3D CAFE — WERELDBEHEER / NIGHT CLUB
+===========================================================
+
+Dit is een UPDATE op je reeds werkende project, niet een volledige vervanging.
+Het bevat de door jou aangeleverde nachtclub (MBRODERI2 / CC BY 4.0).
+
+1. Pak de ZIP uit.
+2. Ga naar https://github.com/michiel66/TS-Heerlen-3D-Cafe
+3. Klik op Add file -> Upload files.
+4. Upload de inhoud van de map (mappen assets, scenes, scripts en tests).
+   Zorg dat de mapstructuur in GitHub hetzelfde blijft, met:
+     assets/worlds/night_club/night_club.glb
+     assets/worlds/night_club/BRON-LICENTIE.txt
+     scripts/world_manager.gd
+     scenes/main.tscn
+     tests/world_manager_test.gd
+5. Commit changes. De bestaande GitHub Actions workflow start automatisch.
+6. Download de Windows Setup bij het geslaagde Actions-artifact.
+7. In de applicatie: Instellingen -> Wereldbeheer.
+   Kies Origineel Cafe of Night Club, klik 'Wereld laden en bewaren'.
+
+BELANGRIJK
+- Niet de scripts/main.gd of scripts/hud.gd vervangen; die blijven intact.
+- Niet de TeamSpeak-audio, PTT, 100Avatars R1 of windows.yml vervangen.
+- De wereldkeuze is lokaal per gebruiker, net als de avatar.
+- Andere TeamSpeak-leden blijven zichtbaar (positie in de nachtclub aangepast).
+- De nachtclub heeft een extra loopbare vloer, onzichtbare buitenwanden en
+  statische botsingen voor een deel van het interieur.
+- Deze patch is nog niet end-to-end in Godot/Windows getest; de nieuwe
+  GitHub-build moet op eventuele import-/GDScript-fouten worden gecontroleerd.
+
+Extra handmatige Godot-test na projectimport (optioneel):
+  godot --headless --path . --script res://tests/world_manager_test.gd
+
+MODEL CREDITS
+"Night Club" by MBRODERI2 (CC BY 4.0)
+https://skfb.ly/ouHGD
+https://creativecommons.org/licenses/by/4.0/
+
+De originele KHR_materials_pbrSpecularGlossiness materialen zijn omgezet naar
+standaard glTF 2.0 metallic-roughness zodat Godot deze kan inladen.
