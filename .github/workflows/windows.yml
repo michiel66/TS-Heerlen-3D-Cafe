@@ -4,7 +4,7 @@ name: TeamSpeak Heerlen - Windows Setup v0.8
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches: [main, master, feature/live-meeting-overlay-v1]
     tags: ['v*']
 
 permissions:
@@ -402,6 +402,28 @@ jobs:
           }
 
           Write-Host '100Avatars R1 test geslaagd.'
+
+      # ==========================================
+      # VERGADERKAMER / LIVE STOELEN REGRESSIETEST
+      # ==========================================
+
+      - name: Test live vergaderkamer en lege stoelen
+        shell: pwsh
+        run: |
+          & $env:GODOT_BIN \
+            --headless \
+            --path . \
+            --script 'res://tests/meeting_overlay_test.gd' \
+            --log-file 'meeting-overlay-check.log'
+
+          if ($LASTEXITCODE -ne 0) {
+            if (Test-Path 'meeting-overlay-check.log') {
+              Get-Content 'meeting-overlay-check.log' -Tail 140
+            }
+            throw 'Live vergaderkamer-test mislukt.'
+          }
+
+          Write-Host 'Live vergaderkamer-test geslaagd.'
 
       # ==========================================
       # WINDOWS EXE BOUWEN
