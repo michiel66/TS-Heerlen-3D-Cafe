@@ -410,11 +410,7 @@ jobs:
       - name: Test live vergaderkamer en lege stoelen
         shell: pwsh
         run: |
-          & $env:GODOT_BIN \
-            --headless \
-            --path . \
-            --script 'res://tests/meeting_overlay_test.gd' \
-            --log-file 'meeting-overlay-check.log'
+          & $env:GODOT_BIN --headless --path . --script 'res://tests/meeting_overlay_test.gd' --log-file 'meeting-overlay-check.log'
 
           if ($LASTEXITCODE -ne 0) {
             if (Test-Path 'meeting-overlay-check.log') {
